@@ -39,5 +39,5 @@ out/<id>/                    최종 결과물: <id>.mp4 (편집 완료 영상) +
 brands/majunge/              브랜드 프로필 (색·폰트·톤)
 assets/sfx, assets/music     효과음·배경음 (직접 넣은 것 + tools/sfx.py 합성음)
 assets/fonts                 젠세리프(썸네일·훅 문구) · subtitle/ 메모먼트 꾹꾹체(자막)
-tools/                       plug.py · job.py · faceblur.py · thumbs.py · subs_preview.py · sfx.py
+tools/                       plug.py · job.py · faceblur.py · thumbs.py · subs_preview.py · sfx.py · gratitude.py(감사일기 렌더 모드)
 ```

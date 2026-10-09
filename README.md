@@ -75,6 +75,7 @@ B-roll 블러만: `/faceblur`
 | `tools/subs_preview.py` | 렌더 전 자막 끊김 미리보기 (키트와 같은 규칙) |
 | `tools/sfx.py` | 기본 효과음 합성 |
 | `tools/fonts.py` | 영상 안 폰트 지정 (훅 문구 젠세리프, 자막 메모먼트 꾹꾹체) |
+| `tools/gratitude.py` | 감사일기 레퍼런스 모습으로 렌더 — 키트에 가운데 외곽선 자막·B-roll 카드 모드 추가(`patch-kit`), 렌더 설정 변환(`props`). 값은 `config/gratitude.json` |
 | `reel-defaults.json`, `it-reelsmaker.json` | IT Reelsmaker 프로젝트 설정 (감사일기 기본값) |
 
 ## 참고

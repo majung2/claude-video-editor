@@ -24,3 +24,5 @@ brands/*
 config/plugins.json
 __pycache__/
 .DS_Store
+
+.claude/settings.local.json

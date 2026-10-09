@@ -2,7 +2,7 @@
 
 키트(Subtitles.tsx buildChunks)와 같은 규칙으로 captions.json 을 덩어리로 나눈다:
   · 구 경계 = 컷 이음새, 0.25초 이상 쉼, 문장 끝(. ! ? …)
-  · 모드별 한 덩어리 최대: accent 3어절/20자 · plate 4어절/26자 · typewriter 10어절/52자
+  · 모드별 한 덩어리 최대: accent 3어절/20자 · plate 4어절/26자 · typewriter 10어절/52자 · gratitude 한 줄(약 13자)
   · 넘치면 가장 긴 쉼이나 쉼표 근처, 가운데에 가까운 곳에서 둘로 나눈다
 
     python3 tools/subs_preview.py edit/<id> [--mode plate|accent|typewriter|all]
@@ -21,7 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PAUSE = 0.25
 SENTENCE_END = re.compile(r"[.!?…][\"»”)]*$")
-MODES = {"accent": (3, 20, 66), "plate": (4, 26, 60), "typewriter": (10, 52, 56)}
+# gratitude: 감사일기 자막 (tools/gratitude.py) — 문장 단위, 한 줄(842px, 78px → 띄어쓰기 포함 약 13자)에 안 들어가면 한 줄씩 나눔
+MODES = {"accent": (3, 20, 66), "plate": (4, 26, 60), "typewriter": (10, 52, 56), "gratitude": (40, 13, 78)}
 MAX_W = 880 - 44
 
 
@@ -87,6 +88,8 @@ def show(words, mode: str) -> int:
         flags = []
         if lines_needed(t, size) >= 3:
             flags.append("3줄+")
+        if mode == "gratitude" and len(t) > 15:
+            flags.append("한 줄 넘칠 수 있음")
         if len(ws) == 1 and len(cs) > 1:
             flags.append("한 어절")
         if b - a < 0.7:

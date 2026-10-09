@@ -1,0 +1,21 @@
+{
+  "_comment": "감사일기 레퍼런스 모습 설정 (tools/gratitude.py). 값은 레퍼런스 릴스 2개 측정값 — references/reference-analysis.md",
+  "subtitles": {
+    "_size": "1920 높이 기준 글자 px. 메모먼트 꾹꾹체 78 에서 레퍼런스와 크기가 맞음",
+    "size": 78,
+    "_centerY": "자막 한 줄의 세로 중심 px (1920 의 74.5%)",
+    "centerY": 1430,
+    "maxWidth": 842,
+    "weight": 700,
+    "color": "#FFFFFF",
+    "outline": 3,
+    "outlineColor": "#000000",
+    "shadow": 2,
+    "holdAfter": 0.25
+  },
+  "_card": "B-roll 카드 상자 x, y, w, h (화면 80% x 80%, 가운데). 사진·영상은 잘리지 않게 이 안에 맞춘다",
+  "card": [108, 192, 864, 1536],
+  "_pip": "가로 사진(폭이 높이의 1.15배 넘음)은 작게: 화면 폭의 55%, 높이 최대 30%, 세로 중심 40%",
+  "pip": {"w": 0.55, "max_h": 0.30, "center_y": 0.40},
+  "pip_if_wider_than": 1.15
+}

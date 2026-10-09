@@ -120,23 +120,121 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
         sd.line([(0, y), (W, y)], fill=int(strength * min(1.0, edge / 220)))
     img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), img, shade)
 
-    d = ImageDraw.Draw(img)
+    # 글자는 마스크에 먼저 그린다: 본문(그라데이션) / 강조·sub(강조색) — 레퍼런스 썸네일 문구 모습
+    plain = Image.new("L", (W, H), 0)
+    emph_m = Image.new("L", (W, H), 0)
+    dp, de = ImageDraw.Draw(plain), ImageDraw.Draw(emph_m)
     margin = 90
     y = y0
+    x_max = margin
     if item.get("sub") and upper:
-        d.text((margin, y), item["sub"], font=sub_font, fill=accent)
+        de.text((margin, y), item["sub"], font=sub_font, fill=255)
         y += int(size * 0.75)
     for line in lines:
         x = margin
         for text, emph in parse_runs(line):
-            d.text((x, y), text, font=font, fill=accent if emph else color)
-            x += d.textlength(text, font=font)
+            (de if emph else dp).text((x, y), text, font=font, fill=255)
+            x += dp.textlength(text, font=font)
         if x > W - margin:
             print(f"  ! 후보 {idx}: '{line}' 줄이 화면 폭을 넘어요 — 줄을 나누거나 size를 줄이세요")
+        x_max = max(x_max, x)
         y += line_h
     if item.get("sub") and not upper:
-        d.text((margin, y + 10), item["sub"], font=sub_font, fill=accent)
-    img.save(out, quality=94)
+        de.text((margin, y + 10), item["sub"], font=sub_font, fill=255)
+    img = img.convert("RGBA")
+    img.alpha_composite(text_layer(plain, emph_m, (margin, x_max), (y0, y0 + block_h), color, accent, style))
+    img.convert("RGB").save(out, quality=94)
+
+
+def _hex(c) -> tuple:
+    if isinstance(c, str):
+        c = c.lstrip("#")
+        return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(c)
+
+
+def wave_warp(layer, xr: tuple, amp: float, periods: float, phase: float):
+    """글자 덩어리 폭(xr) 안에서 열마다 dy = -amp·sin(2π·periods·t + phase) 만큼 세로로 옮긴다 (양수 amp = 먼저 올라감)."""
+    import math
+    import numpy as np
+    from PIL import Image
+    a = np.asarray(layer).astype(np.float32)
+    out = a.copy()
+    x0, x1 = xr
+    span = max(1.0, x1 - x0)
+    for x in range(max(0, int(x0) - 40), min(W, int(x1) + 40)):
+        t = min(1.0, max(0.0, (x - x0) / span))
+        dy = -amp * math.sin(2 * math.pi * periods * t + phase)
+        k = math.floor(dy)
+        f = dy - k
+        col = a[:, x]
+        out[:, x] = (1 - f) * np.roll(col, k, axis=0) + f * np.roll(col, k + 1, axis=0)
+    return Image.fromarray(out.round().clip(0, 255).astype(np.uint8), "RGBA")
+
+
+def bevel(fill, mask, bev: dict):
+    """엠보싱: 글자 가장자리 중 빛(왼쪽 위)을 향한 쪽은 밝게, 반대쪽(오른쪽 아래)은 살짝 어둡게."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    a = np.asarray(mask.filter(ImageFilter.GaussianBlur(float(bev.get("blur", 2.5))))).astype(np.float32) / 255
+    gy, gx = np.gradient(a)
+    s = (gx + gy) / np.sqrt(2)  # 바깥쪽 법선이 왼쪽 위를 향하면 +
+    m = np.abs(s).max() or 1.0
+    s = np.clip(s / (m * 0.5), -1, 1)
+    f = np.asarray(fill).astype(np.float32)
+    k = float(bev["strength"])
+    hi = np.clip(s, 0, 1)[..., None] * k
+    lo = np.clip(-s, 0, 1)[..., None] * k * float(bev.get("dark", 0.45))
+    out = f + hi * (255 - f) - lo * f
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8), "RGB")
+
+
+def text_layer(plain, emph, xr: tuple, yr: tuple, color, accent, style: dict):
+    """레퍼런스 썸네일 문구 모습 (style.json): 가로 파스텔 그라데이션(thumb_gradient) · 아주 옅은 그림자(thumb_shadow)
+    · 오른쪽이 살짝 올라가게 기울임(thumb_tilt 도). 그라데이션이 비어 있으면 thumb_color 단색."""
+    from PIL import Image, ImageChops, ImageFilter
+    stops = [_hex(c) for c in style.get("thumb_gradient", [])]
+    fill = Image.new("RGB", (W, H), color)
+    if len(stops) >= 2:
+        x0, x1 = xr
+        span = max(1, x1 - x0)
+        row = Image.new("RGB", (W, 1))
+        for x in range(W):
+            t = min(1.0, max(0.0, (x - x0) / span)) * (len(stops) - 1)
+            k = min(int(t), len(stops) - 2)
+            f = t - k
+            row.putpixel((x, 0), tuple(round(a + (b - a) * f) for a, b in zip(stops[k], stops[k + 1])))
+        fill = row.resize((W, H), Image.NEAREST)
+    fill.paste(Image.new("RGB", (W, H), accent), (0, 0), emph)
+    mask = ImageChops.lighter(plain, emph)
+
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sh = style.get("thumb_shadow", {})
+    if sh.get("alpha", 0) > 0:
+        a = mask.filter(ImageFilter.GaussianBlur(sh.get("blur", 6))).point(lambda v: int(v * sh["alpha"]))
+        shadow = Image.new("RGBA", (W, H), tuple(_hex(sh.get("color", "#000000"))) + (0,))
+        shadow.putalpha(a)
+        layer.alpha_composite(shadow, (int(sh.get("dx", 3)), int(sh.get("dy", 4))))
+    bev = style.get("thumb_bevel", {})
+    if bev.get("strength", 0) > 0:
+        fill = bevel(fill, mask, bev)
+        # 두께: 글자를 살짝 어둡게 해서 오른쪽 아래로 depth px 만큼 쌓는다 (도톰하게 튀어나온 느낌)
+        dark = fill.point(lambda v: int(v * float(bev.get("side", 0.82)))).convert("RGBA")
+        dark.putalpha(mask)
+        for k in range(int(bev.get("depth", 2)), 0, -1):
+            layer.alpha_composite(dark, (k, k))
+    text = fill.convert("RGBA")
+    text.putalpha(mask)
+    layer.alpha_composite(text)
+
+    wave = style.get("thumb_wave", {})
+    if wave.get("amp", 0):  # 글자 줄이 물결처럼: 세로 위치를 사인 곡선으로 (세로 픽셀 단위, 소수점까지 부드럽게)
+        layer = wave_warp(layer, xr, float(wave["amp"]), float(wave.get("periods", 1.0)), float(wave.get("phase", 0.0)))
+    tilt = float(style.get("thumb_tilt", 0))
+    if tilt:  # 양수 = 반시계 = 오른쪽이 올라감. 글자 덩어리 가운데를 축으로
+        cx, cy = (xr[0] + xr[1]) / 2, (yr[0] + yr[1]) / 2
+        layer = layer.rotate(tilt, resample=Image.BICUBIC, center=(cx, cy))
+    return layer
 
 
 def compare_sheet(paths: list[Path], items: list[dict], out: Path, font_path: Path) -> None:
@@ -175,9 +273,9 @@ def main() -> None:
             out = edit / "thumbs" / f"thumb_{i}.jpg"
             render_one(it, font, style, out, Path(tmp), i)
             outs.append(out)
-            print(f"  저장: {out.relative_to(ROOT)}")
+            print(f"  저장: {out}")
     compare_sheet(outs, items, edit / "thumbs" / "compare.jpg", font)
-    print(f"비교 시트: {(edit / 'thumbs' / 'compare.jpg').relative_to(ROOT)}  (초록 점선 = 프로필 그리드 3:4 영역)")
+    print(f"비교 시트: {edit / 'thumbs' / 'compare.jpg'}  (초록 점선 = 프로필 그리드 3:4 영역)")
 
 
 if __name__ == "__main__":

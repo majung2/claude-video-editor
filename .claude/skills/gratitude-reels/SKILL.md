@@ -35,13 +35,12 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
 1. 환경: `python3 tools/plug.py doctor` — 플러그인 3종 설치와 ffmpeg·Python·Node·faster-whisper·Remotion 점검.
    빠진 플러그인은 출력된 `/plugin …` 명령을 사용자에게 안내하고 멈춘다. 빠진 프로그램은 출력된 설치 명령을 안내.
 2. **처음 한 번만**:
-   - 한글 폰트: `python3 tools/fonts.py` (Pretendard → assets/fonts/brand). **키트 기본 폰트에는 한글이 없어 이게 없으면 자막이 깨진다.**
    - 브랜드: `brands/majunge/` 가 없으면 사용자에게 색 2~3개(없으면 기본 #2B2B2B, #FFD678, #FFF8EC 제안)만 묻고
-     `python3 tools/plug.py rm brand new --name 마정이 --slug majunge --colors "<색들>" --account creator --language ko --tone warm --motion calm --where project --scan assets/fonts/brand`
-     이어서 `python3 tools/fonts.py brand majunge` (본문도 Pretendard 로 맞춤),
-     그다음 **자막 폰트 = 메모먼트 꾹꾹체**: `python3 tools/fonts.py subtitle majunge` (`assets/fonts/subtitle/` 의 파일 사용).
-     파일이 없으면 사용자에게 알리고(아이클라우드 `크리에이터` 폴더에 있음) 넣어 달라고 한 뒤 진행. 화면 훅 문구는 Pretendard 그대로.
-   - Remotion 프로젝트: `reels/` 가 없으면 `python3 tools/plug.py rm kit new reels` → `cd reels && npm install`
+     `python3 tools/plug.py rm brand new --name 마정이 --slug majunge --colors "<색들>" --account creator --language ko --tone warm --motion calm --where project`
+   - **영상 안 폰트** (키트 기본 폰트에는 한글이 없어 이걸 안 하면 글자가 깨진다):
+     `python3 tools/fonts.py heading majunge` → 화면 훅 문구 = 젠세리프 (`assets/fonts/` 의 ZEN-SERIF 파일)
+     `python3 tools/fonts.py subtitle majunge` → 자막 = 메모먼트 꾹꾹체 (`assets/fonts/subtitle/`)
+     폰트 파일이 없으면 사용자에게 알리고(아이클라우드 `크리에이터` 폴더에 있음) 넣어 달라고 한 뒤 진행.
    - 썸네일 폰트: `config/style.json` 의 `thumb_font` 또는 `assets/fonts/` 에 젠세리프 폰트가 있는지. 없으면 사용자에게 파일을 넣어 달라고 하고, 그동안은 시스템 명조체로 진행한다고 말한다.
    - 효과음: `assets/sfx/` 가 비면 `python3 tools/sfx.py`
 3. 영상 등록: 사용자가 준 메인 영상과 B-roll(없을 수 있음)로

@@ -38,6 +38,6 @@ reels/                       Remotion 프로젝트 (kit.py new 로 생성)
 out/<id>/                    최종 결과물: <id>.mp4 (편집 완료 영상) + thumbnail_1~3.jpg (썸네일 후보)
 brands/majunge/              브랜드 프로필 (색·폰트·톤)
 assets/sfx, assets/music     효과음·배경음 (직접 넣은 것 + tools/sfx.py 합성음)
-assets/fonts                 썸네일 젠세리프 · subtitle/ 자막 메모먼트 꾹꾹체 · brand/ 제목 Pretendard
+assets/fonts                 젠세리프(썸네일·훅 문구) · subtitle/ 메모먼트 꾹꾹체(자막)
 tools/                       plug.py · job.py · faceblur.py · thumbs.py · subs_preview.py · sfx.py
 ```

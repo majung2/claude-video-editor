@@ -15,28 +15,29 @@ Claude Code에서 **감독관 1명 + 담당자 7명**이 역할을 나눠 감사
 
 ## 1. 설치 (처음 한 번)
 
-1. 프로그램: ffmpeg, Python 3.9+, Node.js 18+
-   ```bash
-   brew install ffmpeg node        # macOS
-   python3 -m pip install -r requirements.txt
-   ```
-2. Claude Code에서 플러그인 3개 설치:
-   ```
-   /plugin marketplace add itpartypattaya/reels-montage
-   /plugin install it-reelsmaker@itparty
-   /plugin marketplace add social-media-skills/skills
-   /plugin install social-media-skills@social-media-skills
-   /plugin marketplace add rendi-api/ffmpeg-llm
-   /plugin install ffmpeg-llm@rendi-official
-   ```
-   IT Reelsmaker 설정을 물으면 project_root 는 이 폴더, remotion_dir 은 `<이 폴더>/reels` 로.
-3. 점검: `python3 tools/plug.py doctor`
-4. 폰트 (파일은 저장소에 올라가지 않음):
-   - 젠세리프 파일을 `assets/fonts/` 에 → 썸네일 제목 + 화면 훅 문구
-   - 메모먼트 꾹꾹체 파일을 `assets/fonts/subtitle/` 에 → 자막
-5. (선택) 배경음: 쓸 수 있는 음원을 `assets/music/` 에. 효과음은 `python3 tools/sfx.py` 로 기본 4종 생성.
+젠세리프·메모먼트 꾹꾹체 폰트 파일을 넣어 둔 뒤 (`assets/fonts/README.md`), 터미널에서:
 
-브랜드 프로필과 Remotion 프로젝트는 첫 실행 때 감독관이 만들어 줍니다.
+```bash
+bash ~/Desktop/github/claude-video-editor/setup-mac.sh
+```
+
+GitHub 푸시 → ffmpeg·node·Python 패키지·Claude Code 설치 → 플러그인 3개 설치
+(IT Reelsmaker · Social Media Skills · ffmpeg-llm) → 폰트·효과음 확인 → 환경 점검까지 한 번에 합니다.
+여러 번 실행해도 안전하고, 끝에 나오는 doctor 결과에서 빠진 것만 채우면 됩니다.
+
+## 폰에서 원격으로 쓰기
+
+```bash
+bash ~/Desktop/github/claude-video-editor/start-remote.sh
+```
+
+- 이 터미널 창을 켜 두면 폰 **Claude 앱 → Code** 에 "감사일기 릴스" 세션이 뜹니다 (스페이스바 = QR 코드).
+- 편집은 Mac에서 돌아가고, 폰에서는 지시하고 확인 질문(훅 선택 등)에 답하면 됩니다.
+- 켜 둔 동안 Mac이 잠들지 않습니다(caffeinate). 덮개를 닫으면 잠들 수 있으니 전원에 연결해 두세요.
+- 처음 한 번: `Enable Remote Control?` → y, `Trust …?` → y
+- 승인 알림을 폰으로 받으려면: 세션에서 `/config` → **Push when actions required** 켜기
+- 툴킷 명령(`python3 tools/…`, ffmpeg, remotion)은 `.claude/settings.json` 에서 미리 허용해 두어 폰에서 누를 승인이 적습니다.
+- 폰에서 영상 파일을 바로 첨부할 수도 있고, 아이클라우드 `크리에이터/감사일기/촬영본` 경로를 말해도 됩니다.
 
 ## 2. 사용
 

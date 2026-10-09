@@ -1,5 +1,11 @@
-# 썸네일 폰트
+# 폰트
 
-젠세리프 폰트 파일(.ttf / .otf)을 이 폴더에 넣으세요. `tools/thumbs.py` 가 자동으로 찾아 씁니다.
-폰트 라이선스상 저장소에는 올리지 않습니다 (.gitignore).
-다른 경로에 있으면 `config/style.json` 의 `thumb_font` 에 전체 경로를 적어도 됩니다.
+폰트 라이선스상 파일은 저장소에 올리지 않습니다 (.gitignore).
+
+| 위치 | 용도 | 폰트 |
+|---|---|---|
+| `assets/fonts/` | 썸네일 제목 | 젠세리프 (`ZEN-SERIF-TTF-Regular.ttf`) — `tools/thumbs.py` 가 자동으로 찾음 |
+| `assets/fonts/subtitle/` | 영상 자막 | 메모먼트 꾹꾹체 (`TalkFile_MemomentKkukkukk.ttf`) — `python3 tools/fonts.py subtitle majunge` 로 브랜드에 등록 |
+| `assets/fonts/brand/` | 화면 훅 문구 등 제목 | Pretendard — `python3 tools/fonts.py` 가 내려받음 |
+
+원본은 아이클라우드 드라이브 `크리에이터` 폴더에 있습니다.

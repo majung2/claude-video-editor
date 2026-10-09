@@ -31,7 +31,10 @@ Claude Code에서 **감독관 1명 + 담당자 7명**이 역할을 나눠 감사
    ```
    IT Reelsmaker 설정을 물으면 project_root 는 이 폴더, remotion_dir 은 `<이 폴더>/reels` 로.
 3. 점검: `python3 tools/plug.py doctor`
-4. 폰트: 자막용 한글 폰트는 `python3 tools/fonts.py` (Pretendard, 무료). 썸네일용 젠세리프 폰트 파일은 `assets/fonts/` 에.
+4. 폰트 (파일은 저장소에 올라가지 않음):
+   - 자막: 메모먼트 꾹꾹체 파일을 `assets/fonts/subtitle/` 에
+   - 썸네일: 젠세리프 폰트 파일을 `assets/fonts/` 에
+   - 화면 훅 문구 등 제목: `python3 tools/fonts.py` (Pretendard, 자동 다운로드)
 5. (선택) 배경음: 쓸 수 있는 음원을 `assets/music/` 에. 효과음은 `python3 tools/sfx.py` 로 기본 4종 생성.
 
 브랜드 프로필과 Remotion 프로젝트는 첫 실행 때 감독관이 만들어 줍니다.

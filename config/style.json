@@ -1,0 +1,9 @@
+{
+  "_comment": "썸네일 스타일 (tools/thumbs.py). 영상 안 자막·그래픽 스타일은 brands/majunge 브랜드 프로필이 정한다.",
+  "thumb_font": "",
+  "_thumb_font": "젠세리프 폰트 파일 경로 (.ttf/.otf). 비우면 assets/fonts → 시스템 명조체 순으로 자동으로 찾는다.",
+  "thumb_size": 112,
+  "thumb_color": [255, 255, 255],
+  "thumb_accent": [255, 214, 120],
+  "thumb_shade": 150
+}

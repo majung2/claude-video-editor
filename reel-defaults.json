@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "_comment": "감사일기 릴스 프로젝트 기본값 (IT Reelsmaker). 영상별로 edit/<id>/reel.json 이 덮어쓴다.",
+  "settings": {
+    "brand": "majunge",
+    "profile": "educational",
+    "content_format": "story",
+    "intensity": "moderate",
+    "use_broll": true,
+    "use_project_footage": true,
+    "use_local_footage": false,
+    "use_generated_footage": false,
+    "use_memes": false,
+    "use_scenes": false,
+    "footage_dirs": [],
+    "subtitles": "plate"
+  }
+}

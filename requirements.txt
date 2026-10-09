@@ -1,0 +1,6 @@
+# IT Reelsmaker 가 쓰는 것 + 이 툴킷 도구들
+faster-whisper>=1.0
+Pillow>=10.0
+opencv-python-headless>=4.8
+numpy
+pillow-heif        # 아이폰 HEIC 사진을 B-roll로 쓸 때

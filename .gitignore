@@ -1,0 +1,26 @@
+# 영상·작업 결과 (용량 큼, 개인 자료)
+footage/*
+!footage/.gitkeep
+edit/*
+!edit/.gitkeep
+out/
+reels/
+_footage_index/
+footage_index.json
+assets/_catalog/
+
+# 개인 자료
+assets/music/*
+!assets/music/.gitkeep
+assets/fonts/*
+!assets/fonts/README.md
+!assets/fonts/brand/
+assets/fonts/brand/*.woff2
+assets/models/*.onnx
+brands/*
+!brands/.gitkeep
+
+# 로컬 캐시
+config/plugins.json
+__pycache__/
+.DS_Store

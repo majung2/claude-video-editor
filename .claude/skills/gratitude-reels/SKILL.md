@@ -20,6 +20,8 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
    → 5 화면연결 plan(얼굴 블러 포함) ─(사용자: yes)→ 5 화면연결 apply → 6 오디오 → 7 렌더·검수·마스터(감독관)
 ```
 
+**최종 결과물 = 편집 완료 영상 1개 + 썸네일 이미지 후보 3개** (`out/<id>/`). 썸네일은 영상 첫 프레임에 넣지 않는다.
+
 각 단계 시작·끝에 상태를 기록한다: `python3 tools/job.py mark <id> <단계> running|done|failed|skipped --note "…"`.
 `python3 tools/job.py status <id>` 로 어디까지 했는지 본다. 사용자가 "자막만 다시"처럼 한 단계를 요청하면 그 단계부터 이어 간다 (앞 단계 결과는 재사용).
 
@@ -61,7 +63,7 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
 ## 4. 자막 ∥ 썸네일 — **병렬**
 컷이 끝나면 **한 메시지 안에서 Agent 도구를 두 번** 호출한다: `subtitler`, `thumbnail-maker`.
 - 둘 다 끝날 때까지 기다린 뒤 다음으로.
-- 썸네일 후보 3장(`edit/<id>/thumbs/compare.jpg`)을 Read 로 확인하고, 사용자 선택은 마지막(7단계)에 받는다 — 지금 묻지 않아도 된다.
+- 썸네일 후보 3장(`edit/<id>/thumbs/compare.jpg`)을 Read 로 확인만 한다. 썸네일은 영상과 별개의 결과물이라 하나를 고르게 하지 않는다 — 3장 모두 전달.
 - 자막 담당이 "화면연결 뒤 실행할 명령"(hide-subs 등)을 남겼으면 5단계 뒤에 실행한다.
 
 ## 5. 화면연결 → `broll-matcher`
@@ -85,19 +87,23 @@ IT Reelsmaker 8·9단계를 따른다 (필요하면 Skill 도구로 `it-reelsmak
    `--concurrency` 는 CPU 코어 수보다 크게 주지 않는다 (생략하면 자동).
 5. 얼굴 검수(모델이 있으면): `python3 tools/plug.py rm faces audit reels/out/<id>.mp4 --edit edit/<id>`
 6. 컨택트시트: `ffmpeg -v error -i reels/out/<id>.mp4 -vf "fps=12/<길이>,scale=200:356,tile=6x2" -frames:v 1 edit/<id>/sheet.png` → Read.
-7. **썸네일 선택**: compare.jpg 를 보여 주며 AskUserQuestion 으로 3개 중 하나를 고르게 한다 → `cp edit/<id>/thumbs/thumb_<n>.jpg edit/<id>/cover.jpg`
-8. 마스터(audio_plan.json 인자 그대로):
-   `python3 tools/plug.py rm master_audio reels/out/<id>.mp4 -o out/<id>-master.mp4 --cover edit/<id>/cover.jpg --sfx edit/<id>/sfx.json [--music … --gap … --drop-at … --drop-in-track …] [--duck …]`
-   종료 코드 0(LUFS·피크·길이 통과)이 아니면 전달하지 않는다.
-   "frame 0 vs. the cover … not replaced" 로 커버 넣기 검사만 실패하면: 사용자에게 알리고 동의를 받아 `--cover` 없이 마스터하고,
-   썸네일은 `out/<id>-cover.jpg` 로 따로 둔다 (인스타는 업로드 때 커버를 따로 고를 수 있다).
-9. 전달물 `out/`: `<id>-master.mp4`, `<id>-cover.jpg`(업로드용 썸네일), `edit/<id>/captions.srt`, 나머지 썸네일 후보 2장.
-   원하면 Social Media Skills `caption-writer` 로 인스타 캡션 3안을 `out/<id>-caption.txt` 에.
+7. 마스터(audio_plan.json 인자 그대로). **썸네일은 영상에 넣지 않는다 — `--cover` 를 쓰지 않는다** (사용자 결정: 영상과 썸네일은 별개 결과물):
+   `python3 tools/plug.py rm master_audio reels/out/<id>.mp4 -o edit/<id>/master.mp4 --sfx edit/<id>/sfx.json [--music … --gap … --drop-at … --drop-in-track …] [--duck …]`
+   "without --cover" 경고는 정상이다. 종료 코드 0(LUFS·피크·길이 통과)이 아니면 전달하지 않는다.
+8. **최종 결과물** — `out/<id>/` 에 정확히 4개만 둔다:
+   ```bash
+   mkdir -p out/<id>
+   cp edit/<id>/master.mp4            out/<id>/<id>.mp4          # 편집 완료 영상 1개
+   cp edit/<id>/thumbs/thumb_1.jpg    out/<id>/thumbnail_1.jpg   # 썸네일 후보 3개
+   cp edit/<id>/thumbs/thumb_2.jpg    out/<id>/thumbnail_2.jpg
+   cp edit/<id>/thumbs/thumb_3.jpg    out/<id>/thumbnail_3.jpg
+   ```
+   확인: 영상 첫 프레임이 썸네일이 아닌 원래 장면인지 (`ffmpeg -v error -i out/<id>/<id>.mp4 -frames:v 1 edit/<id>/frame0.jpg` → Read).
 
 ## 보고 (끝날 때)
-측정값으로 말한다: 최종 길이, 남은 무음(ms), 라우드니스·피크, 잘라낸 테이크 수, B-roll 개수와 블러한 얼굴 수, 자막 모드와 덩어리 수, 고른 썸네일.
+측정값으로 말한다: 최종 길이, 남은 무음(ms), 라우드니스·피크, 잘라낸 테이크 수, B-roll 개수와 블러한 얼굴 수, 자막 모드와 덩어리 수, 썸네일 후보 3개의 콘셉트.
 `python3 tools/job.py status <id>` 결과를 붙인다. 처리 못 한 것은 이유와 함께 "남은 일"로.
 
 ## 사용자 확인 지점 (이 외에는 묻지 않고 진행)
-처음 한 번의 브랜드 색·자막 모드 · 훅 선택 · 컷 계획 yes · B-roll 계획 yes(+ 블러 애매한 얼굴) · 썸네일 선택.
+처음 한 번의 브랜드 색·자막 모드 · 훅 선택 · 컷 계획 yes · B-roll 계획 yes(+ 블러 애매한 얼굴).
 사용자가 자리에 없으면(예약 실행 등): 추천안으로 진행하되 **컷 build 와 B-roll apply 전에서 멈추고** 계획을 남긴다.

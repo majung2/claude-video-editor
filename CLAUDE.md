@@ -26,6 +26,7 @@
 - 플러그인 스크립트를 고치거나 다시 짜지 않는다. 영상마다 다른 것은 `edit/<id>/` 의 JSON에만.
 - B-roll 은 항상 얼굴 블러된 `footage/<id>/broll_blur/` 만 쓴다. 원본 `broll/` 직접 사용 금지.
 - 사용자 확인 없이 컷(build)·B-roll 적용(apply)·발행하지 않는다.
+- 최종 결과물은 **편집 완료 영상 1개 + 썸네일 이미지 후보 3개**. 썸네일을 영상 첫 프레임(커버)에 넣지 않는다 (`master_audio.py --cover` 금지).
 - 사용자 말을 지어내거나 의미를 바꾸는 편집 금지. 자막은 들은 대로, 맞춤법만.
 
 ## 폴더
@@ -34,7 +35,7 @@ footage/<id>/main.*          메인 영상 (원본 복사본)
 footage/<id>/broll/          B-roll 원본      → broll_blur/ 얼굴 블러본
 edit/<id>/                   IT Reelsmaker 작업 폴더 + pipeline.json(진행 상태)
 reels/                       Remotion 프로젝트 (kit.py new 로 생성)
-out/                         완성본 master.mp4, cover.jpg
+out/<id>/                    최종 결과물: <id>.mp4 (편집 완료 영상) + thumbnail_1~3.jpg (썸네일 후보)
 brands/majunge/              브랜드 프로필 (색·폰트·톤)
 assets/sfx, assets/music     효과음·배경음 (직접 넣은 것 + tools/sfx.py 합성음)
 assets/fonts                 썸네일용 젠세리프 폰트

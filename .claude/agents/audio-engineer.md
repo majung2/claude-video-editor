@@ -36,7 +36,8 @@ model: inherit
  "notes": "감사2 핵심 문장에서 음악 -14dB"}
 ```
    음악이 없으면 `"music": null`. 감독관 실행 형태:
-   `python3 tools/plug.py rm master_audio out/<id>-render.mp4 -o out/<id>-master.mp4 --cover edit/<id>/cover.jpg [--music … --gap … --drop-at … --drop-in-track …] [--duck …] --sfx edit/<id>/sfx.json`
+   `python3 tools/plug.py rm master_audio reels/out/<id>.mp4 -o edit/<id>/master.mp4 [--music … --gap … --drop-at … --drop-in-track …] [--duck …] --sfx edit/<id>/sfx.json`
+   (`--cover` 는 쓰지 않는다 — 썸네일은 영상과 별개 결과물)
 5. 미리 듣기용 검증(선택): 러프컷으로 한 번 돌려 본다 —
    `python3 tools/plug.py rm master_audio edit/<id>/final.mp4 -o edit/<id>/audio_test.mp4 <같은 인자>` → 출력의 LUFS·true peak 가 OK 인지 확인.
 

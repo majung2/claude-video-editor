@@ -35,7 +35,7 @@ VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv"}
 
 FONT_CANDIDATES = [
     # 젠세리프 계열을 먼저 찾고, 없으면 시스템 명조/세리프
-    "*ZenSerif*", "*Zen Serif*", "*젠세리프*", "*ZEN*Serif*",
+    "*zen*serif*", "*젠*세리프*",
     "AppleMyungjo*", "*NanumMyeongjo*Bold*", "*NanumMyeongjo*", "*NotoSerifKR*Bold*",
     "*NotoSerifCJK-Bold*", "*NotoSerifKR*", "*NotoSerifCJK*", "batang*",
 ]
@@ -52,10 +52,13 @@ def load_style() -> dict:
 def find_font(style: dict) -> Path:
     if style.get("thumb_font") and Path(style["thumb_font"]).expanduser().exists():
         return Path(style["thumb_font"]).expanduser()
+    import fnmatch
     for pat in FONT_CANDIDATES:
         for d in FONT_DIRS:
             if d.exists():
-                hits = sorted(h for h in d.rglob(pat) if h.suffix.lower() in {".ttf", ".otf", ".ttc"})
+                # 파일 이름 대소문자 무시 (ZEN-SERIF-TTF-Regular.ttf, ZenSerif.otf 모두 찾음)
+                hits = sorted(h for h in d.rglob("*") if h.suffix.lower() in {".ttf", ".otf", ".ttc"}
+                              and fnmatch.fnmatch(h.name.lower(), pat.lower()))
                 if hits:
                     return hits[0]
     sys.exit("[오류] 세리프 폰트를 못 찾았어요. 젠세리프 폰트 파일을 assets/fonts/ 에 넣거나 "

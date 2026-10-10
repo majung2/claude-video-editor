@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -60,6 +61,34 @@ export type GratitudeStyle = {
   shadow?: number; // px, soft drop shadow under the outline
   holdAfter?: number; // s the line stays after its last word
 };
+// The hook (majunge patch, user decision 2026-10-09): instead of a headline at the top plus subtitles at the bottom, the
+// hook's spoken words appear phrase by phrase, as they are spoken, in the thumbnail's look — heading font (젠세리프),
+// a pastel gradient across the line, a faint shadow, the line tilted up to the right. One phrase at a time, centered.
+export type GratitudeHook = {
+  until: number; // s on the output timeline: the hook ends here, the normal subtitles take over
+  size?: number;
+  centerY?: number;
+  gradient?: string[]; // left → right color stops (config/style.json thumb_gradient)
+  tilt?: number; // degrees, right side up
+  shadow?: { alpha?: number; blur?: number; dx?: number; dy?: number };
+  maxChars?: number; // a phrase grows word by word up to this many letters (spaces not counted)
+  gap?: number; // s of silence that starts a new phrase
+  charStep?: number; // s per letter at most: a word types out letter by letter from its start (tools/gratitude.py keys = same timing)
+};
+
+// letter-by-letter timing of a hook phrase: the letters of each word are typed from the word's start, evenly over the
+// word (at most charStep apart); a space appears with the next letter. tools/gratitude.py hook_keys() mirrors this.
+export const typeTimes = (words: Word[], charStep = 0.11): number[] => {
+  const out: number[] = [];
+  words.forEach((w, i) => {
+    const n = [...w.text].length;
+    const step = Math.min(charStep, Math.max(0.03, (w.end - w.start) / Math.max(1, n)));
+    if (i && !w.glue) out.push(w.start); // the space before the word
+    for (let k = 0; k < n; k++) out.push(w.start + k * step);
+  });
+  return out;
+};
+
 export const GRATITUDE_DEFAULTS: Required<GratitudeStyle> = {
   size: 78, centerY: 1430, maxWidth: 842, weight: 700, color: "#FFFFFF", outline: 3, outlineColor: "#000000", shadow: 2,
   holdAfter: 0.25,
@@ -85,14 +114,34 @@ export const GratitudeSubtitles: React.FC<{
   hide?: [number, number][];
   tail?: number;
   style?: GratitudeStyle | null;
-}> = ({ captions, font, hide = [], tail = 0, style }) => {
+  headFont?: string;
+  hook?: GratitudeHook | null;
+}> = ({ captions, font, hide = [], tail = 0, style, headFont, hook }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const ready = useFontsReady([font]);
+  const ready = useFontsReady(headFont ? [font, headFont] : [font]);
+  const until = hook?.until ?? 0;
+  const hookPhrases = React.useMemo(() => {
+    if (!hook) return [] as { words: Word[]; start: number }[];
+    const maxChars = hook.maxChars ?? 9, gap = hook.gap ?? 0.25;
+    const out: { words: Word[]; start: number }[] = [];
+    let cur: Word[] = [];
+    for (const w of captions.words.filter((x) => x.start < until)) {
+      const len = cur.map((x) => x.text).join("").length;
+      if (cur.length && (w.start - cur[cur.length - 1].end > gap || len + w.text.length > maxChars)) {
+        out.push({ words: cur, start: cur[0].start });
+        cur = [];
+      }
+      cur.push(w);
+    }
+    if (cur.length) out.push({ words: cur, start: cur[0].start });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captions, until]);
   const s = { ...GRATITUDE_DEFAULTS, ...(style ?? {}) };
   const hideKey = JSON.stringify(hide);
   const lines = React.useMemo(() => {
-    const words = captions.words.filter((w) => !hide.some(([a, b]) => w.start >= a && w.end <= b));
+    const words = captions.words.filter((w) => w.start >= until && !hide.some(([a, b]) => w.start >= a && w.end <= b));
     const width = (ws: Word[]) =>
       ready ? measureText({ text: text(ws), fontFamily: font, fontSize: s.size, fontWeight: s.weight }).width + 2 * s.outline : 0;
     // one sentence (or phrase between pauses) per subtitle; one that does not fit on one line is split where it reads as
@@ -115,8 +164,37 @@ export const GratitudeSubtitles: React.FC<{
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captions, hideKey, font, ready, s.size, s.maxWidth, s.weight, s.outline, s.holdAfter, tail]);
+  }, [captions, hideKey, font, ready, s.size, s.maxWidth, s.weight, s.outline, s.holdAfter, tail, until]);
   const t = frame / fps;
+  if (hook && t < until) {
+    // one phrase at a time: it appears with its first word and stays until the next phrase (the last one: to the hook's end)
+    const k = hookPhrases.findIndex((ph, i) => t >= ph.start - 0.03 && (i === hookPhrases.length - 1 || t < hookPhrases[i + 1].start - 0.03));
+    if (k < 0) return null;
+    const size = hook.size ?? 96, cy = hook.centerY ?? s.centerY;
+    const full = text(hookPhrases[k].words);
+    const times = typeTimes(hookPhrases[k].words, hook.charStep ?? 0.11);
+    const shown = times.filter((x) => t >= x - 0.01).length;
+    const hf = headFont ?? font;
+    const pad = size * 0.08;
+    const fullW = ready ? measureText({ text: full, fontFamily: hf, fontSize: size }).width : 0;
+    const shownW = ready ? measureText({ text: full.slice(0, shown), fontFamily: hf, fontSize: size }).width : 0;
+    const stops = (hook.gradient ?? ["#DDF0D2", "#FFF6E6", "#F6D3E3", "#E8DAF2", "#FFF6E6", "#DDF0D2"]).join(", ");
+    const sh = { alpha: 0.4, blur: 6, dx: 3, dy: 4, ...(hook.shadow ?? {}) };
+    return (
+      <div style={{ position: "absolute", left: 0, width: 1080, top: cy - size * 0.7, height: size * 1.4, display: "flex",
+        alignItems: "center", justifyContent: "center" }}>
+        {/* the whole phrase is laid out once (centered) and typed out in place, letter by letter: a clip from the right
+            hides the letters not yet typed, so the gradient keeps its place across the line */}
+        <span style={{ display: "inline-block", fontFamily: hf, fontSize: size, lineHeight: 1.2, whiteSpace: "pre",
+          padding: `0 ${pad}px`, backgroundImage: `linear-gradient(90deg, ${stops})`, WebkitBackgroundClip: "text",
+          backgroundClip: "text", color: "transparent", transform: `rotate(${-(hook.tilt ?? 0)}deg)`,
+          clipPath: `inset(-30% ${Math.max(0, fullW - shownW + pad)}px -30% -30%)`,
+          filter: `drop-shadow(${sh.dx}px ${sh.dy}px ${sh.blur}px rgba(0,0,0,${sh.alpha}))` }}>
+          {full}
+        </span>
+      </div>
+    );
+  }
   if (hide.some(([a, b]) => t >= a && t < b)) return null;
   const l = lines.find((x) => t >= x.start - 0.03 && t < x.end);
   if (!l) return null;
@@ -165,27 +243,53 @@ EDITS = [
      '    body = (\n'
      '      <div style={{ position: "absolute", left: b[0], top: b[1], width: b[2], height: b[3], display: "flex",\n'
      '        alignItems: "center", justifyContent: "center" }}>\n'
-     '        <Media ins={ins} style={{ width: b[2], height: b[3], objectFit: "contain", maxWidth: "none" }} />\n'
+     '        <Media ins={ins} style={{ width: b[2], height: b[3], objectFit: "contain", maxWidth: "none" }} zoom={!!ins.zoom_to} />\n'
      '      </div>\n'
      '    );\n'
      '  } else if (ins.mode === "window") {'),
     ("ReelKit.tsx",
      'import { Captions, KitSubtitles, SubtitleMode } from "./kit/Subtitles";',
      'import { Captions, KitSubtitles, SubtitleMode } from "./kit/Subtitles";\n'
-     'import { GratitudeStyle, GratitudeSubtitles } from "./kit/GratitudeSubtitles"; // majunge patch'),
+     'import { GratitudeHook, GratitudeStyle, GratitudeSubtitles } from "./kit/GratitudeSubtitles"; // majunge patch'),
     ("ReelKit.tsx",
      '  subtitlesTop?: number;',
      '  gratitude?: GratitudeStyle | null; // majunge patch — subtitles "gratitude": its style (tools/gratitude.py props)\n'
+     '  gratitudeHook?: GratitudeHook | null; // majunge patch — the hook spoken phrases in the thumbnail style\n'
      '  subtitlesTop?: number;'),
     ("ReelKit.tsx",
      '      <KitSubtitles captions={p.subtitleCaptions ?? p.captions} brand={p.brand} font={fonts.body} mode={p.subtitles} hide={hide}\n'
      '        top={p.subtitlesTop ?? 1290} look={look} shade={p.subtitlesShade ?? 0.35} part="text" tail={tail} {...subArea} />',
      '      {p.subtitles === "gratitude" ? ( // majunge patch\n'
-     '        <GratitudeSubtitles captions={p.subtitleCaptions ?? p.captions} font={fonts.body} hide={hide} tail={tail} style={p.gratitude} />\n'
+     '        <GratitudeSubtitles captions={p.subtitleCaptions ?? p.captions} font={fonts.body} hide={hide} tail={tail} style={p.gratitude}\n'
+     '          headFont={fonts.heading} hook={p.gratitudeHook} />\n'
      '      ) : (\n'
      '        <KitSubtitles captions={p.subtitleCaptions ?? p.captions} brand={p.brand} font={fonts.body} mode={p.subtitles} hide={hide}\n'
      '          top={p.subtitlesTop ?? 1290} look={look} shade={p.subtitlesShade ?? 0.35} part="text" tail={tail} {...subArea} />\n'
      '      )}'),
+    ("kit/Inserts.tsx",
+     '    const z = zoom ? interpolate(frame, [0, ins.dur * fps], [1, 1.06], clamp) : 1;',
+     '    // majunge patch: the end scale can come from the plan (card push-in); linear and sub-pixel, so it never shakes\n'
+     '    const z = zoom ? interpolate(frame, [0, ins.dur * fps], [1, ins.zoom_to ?? 1.06], clamp) : 1;'),
+    ("kit/Inserts.tsx",
+     '  box?: [number, number, number, number] | number[] | null;\n};',
+     '  box?: [number, number, number, number] | number[] | null;\n'
+     '  zoom_to?: number; // majunge patch — card: end scale of a slow, smooth push-in (photos drawn by the kit)\n};'),
+]
+
+# 예전 버전 패치가 들어간 키트를 새 버전으로 옮긴다 (파일, 예전 패치 결과, 새 패치 결과) — patch-kit 이 EDITS 전에 적용
+MIGRATIONS = [
+    ('kit/Inserts.tsx',
+     '        <Media ins={ins} style={{ width: b[2], height: b[3], objectFit: "contain", maxWidth: "none" }} />\n',
+     '        <Media ins={ins} style={{ width: b[2], height: b[3], objectFit: "contain", maxWidth: "none" }} zoom={!!ins.zoom_to} />\n'),
+    ('ReelKit.tsx',
+     '<GratitudeSubtitles captions={p.subtitleCaptions ?? p.captions} font={fonts.body} hide={hide} tail={tail} style={p.gratitude} />',
+     '<GratitudeSubtitles captions={p.subtitleCaptions ?? p.captions} font={fonts.body} hide={hide} tail={tail} style={p.gratitude}\n          headFont={fonts.heading} hook={p.gratitudeHook} />'),
+    ('ReelKit.tsx',
+     'import { GratitudeStyle, GratitudeSubtitles } from "./kit/GratitudeSubtitles"; // majunge patch',
+     'import { GratitudeHook, GratitudeStyle, GratitudeSubtitles } from "./kit/GratitudeSubtitles"; // majunge patch'),
+    ('ReelKit.tsx',
+     '  gratitude?: GratitudeStyle | null; // majunge patch — subtitles "gratitude": its style (tools/gratitude.py props)',
+     '  gratitude?: GratitudeStyle | null; // majunge patch — subtitles "gratitude": its style (tools/gratitude.py props)\n  gratitudeHook?: GratitudeHook | null; // majunge patch — the hook spoken phrases in the thumbnail style'),
 ]
 
 
@@ -234,6 +338,12 @@ def cmd_patch(a) -> None:
         sys.exit(f"[오류] 키트가 없어요: {src}/ReelKit.tsx (kit.py new 로 먼저 만드세요)")
     (src / "kit" / "GratitudeSubtitles.tsx").write_text(GRATITUDE_TSX, encoding="utf-8")
     changed, failed = [], []
+    for f, old, new in MIGRATIONS:
+        p = src / f
+        s = p.read_text(encoding="utf-8")
+        if new not in s and s.count(old) == 1:
+            p.write_text(s.replace(old, new), encoding="utf-8")
+            changed.append(f)
     for f, old, new in EDITS:
         p = src / f
         s = p.read_text(encoding="utf-8")
@@ -273,6 +383,106 @@ def media_size(path: Path) -> tuple[int, int] | None:
         return None
 
 
+def hook_until(edit: Path) -> float | None:
+    """훅(cut.json beat "hook") 구간이 끝나는 출력 초. 맨 앞 range 들이 hook 일 때만."""
+    try:
+        cut = json.loads((edit / "cut.json").read_text(encoding="utf-8"))
+        cap = json.loads((edit / "captions.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    end = None
+    for r, sg in zip(cut.get("ranges", []), cap.get("segments", [])):
+        if r.get("beat") != "hook":
+            break
+        end = sg["out_start"] + sg["out_dur"]
+    return end
+
+
+def hook_keys(edit: Path, hook: dict) -> list[float]:
+    """훅 자막이 한 글자씩 나오는 시각들 (키보드 효과음 자리). 키트 GratitudeSubtitles.typeTimes 와 같은 계산."""
+    cap = json.loads((edit / "captions.json").read_text(encoding="utf-8"))
+    until, step_max = hook["until"], hook.get("charStep", 0.11)
+    out = []
+    for w in cap["words"]:
+        if w["start"] >= until:
+            break
+        n = len(w["text"])
+        step = min(step_max, max(0.03, (w["end"] - w["start"]) / max(1, n)))
+        out += [round(w["start"] + k * step, 3) for k in range(n)]
+    return out
+
+
+def peak_db(path: Path) -> float | None:
+    """소리의 최대 레벨(dBFS) — master_audio 가 효과음 크기를 정하는 기준과 같다."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-vn", "-af", "volumedetect", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    for line in r.stderr.splitlines():
+        if "max_volume:" in line:
+            return float(line.split("max_volume:")[1].split()[0])
+    return None
+
+
+def cmd_keys(a) -> None:
+    """edit/<id>/sfx.json 에 훅 타이핑(key)·"감사합니다" 딸깍(click) 효과음을 넣는다 (같은 종류는 다시 계산해 바꿈)."""
+    c = config()
+    edit = Path(a.edit)
+    until = hook_until(edit)
+    p = edit / "sfx.json"
+    sfx = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"below_voice_db": 15, "sounds": []}
+    keep = [x for x in sfx["sounds"] if x.get("what") not in ("훅 타이핑", "감사합니다 딸깍", "감사합니다 효과음")]
+    snd = c.get("sounds", {})
+    added = []
+    if until and c.get("hook") and snd.get("key"):
+        keys = snd["key"] if isinstance(snd["key"], list) else [snd["key"]]
+        for i, t in enumerate(hook_keys(edit, {**c["hook"], "until": until})):
+            # 높이가 조금씩 다른 키 소리를 돌아가며 (같은 소리 반복은 기계음처럼 들림)
+            added.append({"file": keys[(i * 3 + i // 2) % len(keys)], "at": t, "start": 0.0, "what": "훅 타이핑"})
+    if snd.get("click"):
+        cap = json.loads((edit / "captions.json").read_text(encoding="utf-8"))
+        dur = float(cap.get("duration") or 0) or None
+        # 말 첫 음절과 겹치면 목소리에 묻힌다 (2026-10-10 확인) → 말이 끝나는 순간에, 목소리보다 click_below_db 만 낮게
+        gain = None
+        if snd.get("click_below_db") is not None:
+            voice = peak_db(edit / "final.mp4")
+            cpk = peak_db(ROOT / snd["click"])
+            if voice is not None and cpk is not None:
+                gain = round(voice - float(snd["click_below_db"]) - cpk, 1)
+        for w in cap["words"]:
+            if w["text"].rstrip(".!") in snd.get("click_words", ["감사합니다", "감사했습니다"]):
+                at = w["end"] - 0.03 if snd.get("click_at", "end") == "end" else w["start"]
+                if dur:
+                    at = min(at, dur - 0.15)  # 소리가 영상 끝에서 잘리지 않게
+                x = {"file": snd["click"], "at": round(at, 3), "start": 0.0, "what": "감사합니다 효과음"}
+                if gain is not None:
+                    x["gain_db"] = gain
+                added.append(x)
+    sfx["sounds"] = sorted(keep + added, key=lambda x: x["at"])
+    p.write_text(json.dumps(sfx, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"효과음: 훅 타이핑 {sum(x['what'] == '훅 타이핑' for x in added)}개, 감사합니다 효과음 "
+          f"{sum(x['what'] == '감사합니다 효과음' for x in added)}개 → {p}")
+
+
+def photo_source(edit: Path, ins_id: str) -> Path | None:
+    """visual_plan.json 에서 그 인서트가 고른 프로젝트 사진 (블러본) 경로."""
+    try:
+        plan = json.loads((edit / "visual_plan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for ins in plan.get("inserts", []):
+        if ins.get("id") == ins_id:
+            cand = ins.get("candidate") or {}
+            for k in ("id", "path"):
+                q = cand.get(k)
+                if q and (ROOT / q if not Path(q).is_absolute() else Path(q)).suffix.lower() in IMAGE_EXT:
+                    q = ROOT / q if not Path(q).is_absolute() else Path(q)
+                    if q.exists():
+                        return q
+    return None
+
+
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+
+
 def cmd_props(a) -> None:
     rem = remotion_dir(a.remotion)
     miss = status(rem)
@@ -285,12 +495,30 @@ def cmd_props(a) -> None:
     props["gratitude"] = c["subtitles"]
     props["drift"] = False  # 레퍼런스: 줌 없음
     props.pop("camera", None)
+    props["hook"] = None  # (pop 하면 템플릿 기본 문구가 나온다) 위쪽 훅 문구 대신 훅 자막(gratitudeHook) — 사용자 결정 2026-10-09
+    hook_end = hook_until(Path(a.edit)) if a.edit else None
+    if hook_end and c.get("hook"):
+        style_json = ROOT / "config" / "style.json"
+        grad = json.loads(style_json.read_text(encoding="utf-8")).get("thumb_gradient") if style_json.exists() else None
+        props["gratitudeHook"] = {**c["hook"], "until": round(hook_end, 3), **({"gradient": grad} if grad else {})}
+        # 훅 문구와 겹치지 않게 숨겨 두던 창은 이제 필요 없다 (훅 자막이 그 자리)
+        props["hideSubtitles"] = [h for h in props.get("hideSubtitles") or [] if not (h[0] <= 0.05 and h[1] <= hook_end + 0.5)]
     cards = pips = 0
     for ins in props.get("inserts", []):
         if ins.get("kind") != "broll" or ins.get("mode") not in ("replace", "window", "card"):
             continue
         ins["mode"] = "card"
         ins["transition_in"] = ins["transition_out"] = "cut"
+        photo = photo_source(Path(a.edit), ins["id"]) if a.edit else None
+        if photo and c.get("card_zoom", 1.0) > 1.0:
+            # 사진은 미리 만든 확대 영상(zoompan: 픽셀 단위로 움직여 떨림) 대신 원본(블러본)을 키트가 직접 그리며 부드럽게 확대
+            dst = rem / "public" / Path(ins["file"]).parent.parent / "photos" / (ins["id"] + photo.suffix.lower())
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(photo, dst)
+            ins["file"] = dst.relative_to(rem / "public").as_posix()
+            ins["media"] = "image"
+            ins["src_in"] = 0.0
+            ins["zoom_to"] = float(c["card_zoom"])
         size = media_size(rem / "public" / ins["file"])
         if ins.get("media") == "image" and size and size[0] > size[1] * float(c["pip_if_wider_than"]):
             # 가로 사진: 작게 위쪽 (레퍼런스 PiP, 폭 55 %, 세로 중심 40 %)
@@ -324,8 +552,10 @@ def main() -> None:
     q.add_argument("props")
     q.add_argument("--edit")
     q.add_argument("--remotion")
+    q = sp.add_parser("keys", help="훅 타이핑·감사합니다 효과음을 sfx.json 에 넣기")
+    q.add_argument("--edit", required=True)
     a = ap.parse_args()
-    {"patch-kit": cmd_patch, "check": cmd_check, "props": cmd_props}[a.cmd](a)
+    {"patch-kit": cmd_patch, "check": cmd_check, "props": cmd_props, "keys": cmd_keys}[a.cmd](a)
 
 
 if __name__ == "__main__":

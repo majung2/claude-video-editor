@@ -12,6 +12,7 @@ spec.json 예시 (썸네일 담당이 작성):
       {"src": "footage/<id>/broll/IMG_0123.jpg", "title": "...", "pos": "lower"},
       {"src": "edit/<id>/final.mp4", "t": 31.0, "title": "..."}
     ]}
+    · align: left(기본) | center — 줄마다 가운데 정렬 (config/style.json 의 thumb_align 으로 기본값 변경 가능)
     · title 의 \\n 은 줄바꿈, {중괄호} 는 강조색.  pos: upper | lower
     · src 가 영상이면 t(초) 필수, 사진이면 생략
 
@@ -130,8 +131,14 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     if item.get("sub") and upper:
         de.text((margin, y), item["sub"], font=sub_font, fill=255)
         y += int(size * 0.75)
+    center = item.get("align", style.get("thumb_align", "left")) == "center"
+    x_min = W
     for line in lines:
         x = margin
+        if center:
+            lw = sum(dp.textlength(t, font=font) for t, _ in parse_runs(line))
+            x = max(margin, (W - lw) / 2)
+        x_min = min(x_min, x)
         for text, emph in parse_runs(line):
             (de if emph else dp).text((x, y), text, font=font, fill=255)
             x += dp.textlength(text, font=font)
@@ -142,7 +149,7 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     if item.get("sub") and not upper:
         de.text((margin, y + 10), item["sub"], font=sub_font, fill=255)
     img = img.convert("RGBA")
-    img.alpha_composite(text_layer(plain, emph_m, (margin, x_max), (y0, y0 + block_h), color, accent, style))
+    img.alpha_composite(text_layer(plain, emph_m, (min(margin, x_min) if not center else x_min, x_max), (y0, y0 + block_h), color, accent, style))
     img.convert("RGB").save(out, quality=94)
 
 

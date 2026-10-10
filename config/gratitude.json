@@ -14,8 +14,51 @@
     "holdAfter": 0.25
   },
   "_card": "B-roll 카드 상자 x, y, w, h (화면 80% x 80%, 가운데). 사진·영상은 잘리지 않게 이 안에 맞춘다",
-  "card": [108, 192, 864, 1536],
-  "_pip": "가로 사진(폭이 높이의 1.15배 넘음)은 작게: 화면 폭의 55%, 높이 최대 30%, 세로 중심 40%",
-  "pip": {"w": 0.55, "max_h": 0.30, "center_y": 0.40},
-  "pip_if_wider_than": 1.15
+  "card": [
+    108,
+    192,
+    864,
+    1536
+  ],
+  "_pip": "가로 사진은 카드 대신 머리 위쪽에: 화면 폭의 80%, 높이 최대 30%, 세로 중심 21.5% (얼굴을 덮지 않게 — 2026-10-09 사용자 피드백 반영, 처음 값은 폭 55%·중심 40%)",
+  "pip": {
+    "w": 0.8,
+    "max_h": 0.3,
+    "center_y": 0.215
+  },
+  "pip_if_wider_than": 1.15,
+  "_card_zoom": "B-roll 사진 카드가 보이는 동안 천천히 커지는 끝 배율 (1.0 = 확대 없음). 렌더 엔진이 사진을 직접 그려 떨림 없이 부드럽게",
+  "card_zoom": 1.05,
+  "_hook": "훅 구간 자막: 위쪽 훅 문구 대신, 말하는 마디마다 썸네일과 같은 젠세리프·파스텔 그라데이션 글씨 (색은 config/style.json thumb_gradient)",
+  "hook": {
+    "size": 96,
+    "centerY": 1430,
+    "tilt": 0,
+    "maxChars": 9,
+    "gap": 0.25,
+    "shadow": {
+      "alpha": 0.45,
+      "blur": 6,
+      "dx": 3,
+      "dy": 4
+    },
+    "charStep": 0.11,
+    "_charStep": "한 글자씩 나오는 간격 최대값(초). 단어가 말해지는 동안 글자를 고르게 나눠 친다"
+  },
+  "_sounds": "효과음 (tools/gratitude.py keys): key = 훅 자막 한 글자마다 키보드 소리(4가지 돌아가며), click = click_words 를 말할 때마다 넣는 소리 (2026-10-10 사용자 결정: 뽁 pop.wav, 말 시작 순간). click_at start|end, click_below_db = 목소리 최대 레벨보다 몇 dB 낮게 (말과 겹쳐도 들리게 6). click.wav(마우스 딸깍)는 남겨 둠",
+  "sounds": {
+    "key": [
+      "assets/sfx/key1.wav",
+      "assets/sfx/key2.wav",
+      "assets/sfx/key3.wav",
+      "assets/sfx/key4.wav"
+    ],
+    "click": "assets/sfx/pop.wav",
+    "click_words": [
+      "감사합니다",
+      "감사했습니다"
+    ],
+    "click_at": "start",
+    "click_below_db": 6
+  }
 }

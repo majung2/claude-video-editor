@@ -26,6 +26,10 @@ model: inherit
    시각은 captions.json 단어 `start`(렌더 기준 초). 말과 겹치는 큰 소리 금지.
    `edit/<id>/sfx.json`:
    `{"below_voice_db": 15, "sounds": [{"file": "assets/sfx/pop.wav", "at": 4.73, "start": 0.0, "what": "감사1 등장"}]}`
+   이어서 **반드시** `python3 tools/gratitude.py keys --edit edit/<id>` — 훅 자막이 한 글자씩 나올 때마다 키보드 소리(key),
+   "감사합니다"를 말하기 시작하는 순간마다 뽁(pop)을 넣는다 (사용자 결정 2026-10-10 — 소리·위치·크기는 config/gratitude.json sounds).
+   마지막 "감사합니다"에는 ding 을 넣지 않는다. 감사 2·3 등장 pop 은 이 소리와 겹치므로 넣지 않는다 (감사 1 등장만).
+   효과음이 많으니 `below_voice_db` 는 18 로 둔다 (15 면 효과음이 목소리와 겹쳐 피크 −1dB 를 넘었다).
 3. **배경음** — `assets/music/` 에서 잔잔하고 따뜻한 곡 (가사 없는 곡 우선). 없으면 BGM 없이 간다 (지어내거나 다운로드하지 않는다).
    곡이 있으면 `python3 tools/plug.py rm master_audio assets/music/<곡> --find-drops` 로 고조 지점을 찾아 마무리 문장에 맞춘다.
    가장 중요한 감사 문장(훅 문장 본문 위치)은 `--duck A-B` 로 음악을 더 낮춘다.

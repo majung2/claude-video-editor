@@ -47,6 +47,7 @@ tools/                       plug.py · job.py · faceblur.py · thumbs.py · su
 Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 프로그램은 실행할 수 없다.
 
 ### 준비 (세션마다) — 묶음 하나로 1분 안팎
+**기본은 Mac 이 켜져 있을 때의 이 방식이다 (사용자 결정 2026-10-10).** 구글 드라이브 `크리에이터/감사일기-툴킷/cloud-setup-bundle.tgz` 는 Mac 을 못 쓸 때의 비상용 — 사용자가 직접 대화에 올려야 하고(드라이브 연결 도구로는 큰 파일을 주고받을 수 없음), 그때는 클라우드에서 전사를 할 수 없다.
 1. 폴더 접근 요청: 툴킷 `~/Desktop/github/claude-video-editor`, 원본 `~/Library/Mobile Documents/com~apple~CloudDocs/크리에이터/감사일기`, 전사 모델 `~/.cache/huggingface`.
 2. 새 영상이면 원본을 툴킷으로 옮겨 둔다 (Mac 연결 셸에서 `cp` 로 `footage/<id>/main.MOV`, `footage/<id>/broll/`).
 3. **Mac 연결 셸:** `bash tools/cloud_bundle.sh <id>` → `_bundle/cloud.tgz` 하나 (툴킷 전체 + 커밋 안 된 변경 + 폰트·브랜드·패치된 엔진 + 그 영상).

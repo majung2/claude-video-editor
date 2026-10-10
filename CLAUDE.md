@@ -46,18 +46,23 @@ tools/                       plug.py · job.py · faceblur.py · thumbs.py · su
 원격 세션(서브에이전트 위임)은 담당자가 명령 전 준비에 시간을 많이 써서 멈춘 것처럼 보였다. 지금은 **클라우드 세션의 Claude가 감독관 흐름을 직접 돌리고, 단계마다 사용자 확인**을 받는 방식이 가장 빠르다.
 Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 프로그램은 실행할 수 없다.
 
-### 준비 (세션마다)
-1. 폴더 접근 요청: 툴킷 `~/Desktop/github/claude-video-editor`, 원본 `~/Library/Mobile Documents/com~apple~CloudDocs/크리에이터/감사일기`, (재전사가 필요하면) `~/.cache/huggingface`.
-2. GitHub 저장소를 클론하고, **git 에 없는 파일**을 stage 해서 덮어쓴다: `brands/`, `assets/fonts/`, `assets/models/`, `reels/package*.json`·`reels/src/`, `footage/<id>/`, `edit/<id>/`, 푸시 안 된 커밋의 파일.
-   한글 파일명은 stage 뒤 이름 정규화(NFD)가 달라 `cp "경로"` 가 실패한다 → `find … -exec cp` 로 복사.
-3. `config/plugins.json` 은 지우고 `export REELSMAKER_DIR=<세션의 it-reelsmaker 폴더>` (`find / -name kit.py -path '*it-reelsmaker*'`).
-4. `cd reels && npm ci`. Remotion 은 브라우저를 remotion.media 에서 받으려다 실패한다 → still·render 에 항상
-   `--browser-executable=/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell`.
-5. `python3 tools/gratitude.py patch-kit` → `check`.
+### 준비 (세션마다) — 묶음 하나로 1분 안팎
+1. 폴더 접근 요청: 툴킷 `~/Desktop/github/claude-video-editor`, 원본 `~/Library/Mobile Documents/com~apple~CloudDocs/크리에이터/감사일기`, 전사 모델 `~/.cache/huggingface`.
+2. 새 영상이면 원본을 툴킷으로 옮겨 둔다 (Mac 연결 셸에서 `cp` 로 `footage/<id>/main.MOV`, `footage/<id>/broll/`).
+3. **Mac 연결 셸:** `bash tools/cloud_bundle.sh <id>` → `_bundle/cloud.tgz` 하나 (툴킷 전체 + 커밋 안 된 변경 + 폰트·브랜드·패치된 엔진 + 그 영상).
+   400MB 를 넘으면 메인 영상만 빠지고 "따로 stage" 경로가 나온다. → 이 파일(들)만 stage. **git push·클론 필요 없음.**
+4. **클라우드:** `tar -xzf <cloud.tgz> -O --wildcards '*tools/cloud_setup.sh' > /tmp/s.sh && bash /tmp/s.sh <cloud.tgz> ~/w [따로 받은 main.MOV]`
+   → 풀기·한글 파일 이름(NFC)·플러그인 위치·`npm ci`·렌더 브라우저(remotion.config.ts 에 지정되어 플래그 불필요)·얼굴 모델·패치·점검을 한 번에 (10초 남짓).
+   이후 명령 전에 `source ~/w/.cloud_env`.
+5. **전사(Mac 연결 셸):** 처음이면 `~/w/_bundle/rm_scripts.tgz` 를 Mac 툴킷 `_bundle/rm_scripts.tgz` 로 보낸다(SendUserFile → device_commit_files).
+   `bash tools/vm_transcribe.sh <id>` (device_bash `timeout_ms: 180000`) — "계속"이면 같은 명령을 다시, "끝"이면
+   결과 파일(`edit/<id>/transcripts/main.json`, `audio16k-main.*`)을 stage 해서 `~/w/edit/<id>/` 에. 2분 영상은 한 번(약 105초)에 끝났다.
+   device_bash 는 호출이 끝나면 그 안의 프로그램을 모두 끝내서 백그라운드 실행(nohup·setsid)은 안 된다 → 1분 조각으로 이어서 받아쓴다.
+   사용자가 Mac 터미널을 열 필요가 없다. (안 되면 예전처럼 Mac 터미널에서 `python3 tools/plug.py rm transcribe …`)
+6. 결과물·작업 파일은 끝날 때 Mac 으로 보낸다 (아래 "전달"). `edit/<id>/final.mp4` 같은 큰 중간 파일은 보내지 않으므로, 나중에 같은 영상을 다른 세션에서 고치려면 `cut.py` 를 다시 돌린다(2분 영상 약 4분).
 
 ### 단계별 메모
-- **전사:** 클라우드에는 음성 인식 모델이 없다(Hugging Face 차단). 전체 전사는 Mac 터미널에서
-  `python3 tools/plug.py rm transcribe edit/<id> footage/<id>/main.MOV --language ko --model medium` (2분 영상 몇 분).
+- **전사:** 클라우드에는 음성 인식 모델이 없다(Hugging Face 차단) → 준비 5번의 `vm_transcribe.sh`.
 - **더듬은 곳·반복 찾기:** Whisper 는 다시 말한 부분을 1초 넘게 늘어진 단어 하나로 뭉친다. 늘어진 단어 주변을 **5초 이하로 잘라 다시 받아쓴다** —
   기기 연결 VM 에서 `pip install faster-whisper` 후 `~/.cache/huggingface` 의 medium 모델로 실행(VM 은 HF 다운로드 불가, Mac 캐시는 읽힘).
   결과는 `edit/<id>/snip/` 에 두고, 맞는 구간의 단어를 `transcripts/main.json` 에 덮어쓴다(원본은 `main.before-splice.json`). 끊는 자리는 `speech_mask.py` 로.
@@ -65,6 +70,7 @@ Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 
 - **전달:** 기기로 보내는 파일은 30MB 한도 → 마스터를 `libx264 -b:v 3600k -maxrate 4500k`, 소리는 `-c:a copy` 로 다시 압축하고
   `master_audio --check` 로 다시 확인. 영상은 SendUserFile 로 보낸 뒤 그 fileUuid 로 기기에 쓴다. 인스타가 어차피 다시 압축하므로 화질 문제 없음.
 - **git:** 기기 연결 셸은 기본적으로 삭제가 막혀 git 잠금 파일이 남는다 → 커밋 전에 툴킷 폴더 삭제 권한을 요청한다. 푸시는 사용자가 Mac 에서.
+- **stage 가 `untrusted_device` 로 거부되면** Mac 의 Claude 데스크톱 앱 로그인이 만료된 것 → 사용자에게 다시 로그인해 달라고 하고 기다린다.
 
 ### 사용자가 정한 것 (다음 영상도 그대로)
 - 결과물 = 영상 1개 + 썸네일(후보를 보여 주고 고른 1장). 썸네일은 영상 첫 프레임에 넣지 않는다.

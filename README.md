@@ -28,9 +28,12 @@ Claude 앱(데스크톱·웹·폰)의 **크리에이터 프로젝트**에서 새
 
 - 편집은 Anthropic 클라우드 작업 공간에서 돌아가고, Mac의 툴킷 폴더와는 **Claude 데스크톱 앱 연결**로 파일을 주고받습니다.
   그래서 Mac에서 Claude 데스크톱 앱이 켜져 있고, 그 대화가 Mac에 연결돼 있어야 합니다.
-- 처음에 폴더 접근 허락 창이 몇 번 뜹니다: 툴킷 폴더, 아이클라우드 `크리에이터/감사일기`, (필요할 때) 음성 인식 모델 폴더 `~/.cache/huggingface`.
-- 작업 공간 준비(편집 엔진 설치 등)에 처음 몇 분 걸립니다.
-- **시작 전에 Mac에서 `git push`** 를 해 두세요. 새 세션은 GitHub에서 툴킷을 받아 시작합니다.
+- 처음에 폴더 접근 허락 창이 몇 번 뜹니다: 툴킷 폴더, 아이클라우드 `크리에이터/감사일기`, 음성 인식 모델 폴더 `~/.cache/huggingface`.
+- 작업 공간 준비는 1분 안팎입니다. Claude가 Mac 쪽에서 툴킷을 파일 하나로 묶고(`tools/cloud_bundle.sh`), 클라우드에서 한 번에 풉니다(`tools/cloud_setup.sh`).
+  커밋하지 않은 변경도 함께 가져가므로 `git push` 를 안 해도 최신 툴킷으로 작업합니다.
+- 전사도 Claude가 Mac에 받아 둔 음성 인식 모델로 직접 돌립니다(`tools/vm_transcribe.sh`). 터미널을 열 필요가 없습니다.
+  (Mac에서 한 번도 전사한 적이 없으면 모델이 없으니, 처음 한 번은 Mac 터미널에서 `python3 tools/plug.py rm transcribe …` 를 돌려 주세요.)
+- Claude 데스크톱 앱 로그인이 만료되면 파일을 못 가져옵니다. Claude가 알려 주면 Mac에서 다시 로그인하면 됩니다.
 - 영상마다 **새 대화**로 시작하는 게 좋습니다. 한 대화가 길어지면 느려집니다. 필요한 결정은 `CLAUDE.md` 와 `config/` 에 남아 있습니다.
 
 ### B. Mac의 Claude Code에서 실행
@@ -104,7 +107,8 @@ Claude가 단계마다 결과를 보여 주고 필요한 것만 묻습니다. �
 
 | 증상 | 원인과 해결 |
 |---|---|
-| 전사 단계에서 한참 멈춤 | 첫 실행 때 음성 인식 모델(약 1.5GB) 다운로드이거나, 원격 세션 담당자가 명령 전에 시간을 쓰는 경우. Mac 터미널에서 직접: `python3 tools/plug.py rm transcribe edit/<id> footage/<id>/main.MOV --language ko --model medium` |
+| 전사 단계에서 한참 멈춤 | 첫 실행 때 음성 인식 모델(약 1.5GB) 다운로드이거나, 원격 세션 담당자가 명령 전에 시간을 쓰는 경우. A 방식에서는 `tools/vm_transcribe.sh <id>` 가 1분 조각으로 이어서 받아씁니다. Mac 터미널에서 직접: `python3 tools/plug.py rm transcribe edit/<id> footage/<id>/main.MOV --language ko --model medium` |
+| Claude가 "파일을 가져올 수 없다(로그인 만료)"고 함 | Mac의 Claude 데스크톱 앱에 로그인 안내가 떠 있음 → 다시 로그인 |
 | 자막에 같은 말이 두 번 나옴 / "바로 가능 내일 가능"처럼 더듬은 게 남음 | 음성 인식이 다시 말한 부분을 한 단어로 뭉친 것. 1초 넘게 늘어진 단어 주변을 5초 이하로 다시 받아써서 찾아 뺍니다 (A 방식에서 Claude가 처리) |
 | B-roll 사진이 흔들림 | 예전 방식(미리 만든 확대 영상). 지금은 렌더 엔진이 직접 부드럽게 확대합니다. `python3 tools/gratitude.py patch-kit` 으로 엔진을 최신으로 |
 | 화면에 "ReelKit template" 글자 | 훅 문구가 비어 엔진 기본값이 나온 것. `tools/gratitude.py props` 를 거치면 꺼집니다 |
@@ -122,6 +126,9 @@ Claude가 단계마다 결과를 보여 주고 필요한 것만 묻습니다. �
 | `.claude/skills/gratitude-reels/` | 감독관 — 전체 흐름, 사용자 확인, 렌더·마스터 (`references/` 에 형식·레퍼런스 분석) |
 | `.claude/skills/faceblur/` | B-roll 다른 사람 얼굴 블러 |
 | `.claude/agents/*.md` | 담당자 7명 — 전사기·후커·컷편집·자막·썸네일·화면연결·오디오 (B 방식, A에서도 단계 규칙으로 씀) |
+| `tools/cloud_bundle.sh` | (A 방식, Mac 쪽) 툴킷·개인 파일·영상을 `_bundle/cloud.tgz` 하나로 묶기 |
+| `tools/cloud_setup.sh` | (A 방식, 클라우드 쪽) 묶음 풀기부터 렌더 준비·점검까지 한 번에 |
+| `tools/vm_transcribe.sh` / `.py` | (A 방식, Mac 쪽) Mac에 받아 둔 모델로 전체 전사 (1분 조각으로 이어서) |
 | `tools/plug.py` | 플러그인 찾기·점검(`doctor`)·IT Reelsmaker 스크립트 실행 |
 | `tools/job.py` | 영상 등록, 단계별 진행 상태 |
 | `tools/gratitude.py` | 감사일기 모습으로 렌더 — 엔진 패치(`patch-kit`), 렌더 설정 변환(`props`: 자막·훅 타이핑·B-roll 카드·부드러운 확대), 효과음 배치(`keys`: 훅 타닥·감사합니다 뽁) |
@@ -141,7 +148,7 @@ edit/<id>/                 작업 폴더(전사·컷·자막·B-roll 계획·효
 out/<id>/                  결과물              reels/                   렌더 엔진(Remotion, git 에 없음)
 brands/majunge/            브랜드(색·폰트)      assets/                  폰트·효과음·음악·얼굴 모델
 ```
-`footage/`, `edit/`, `out/`, `reels/`, `brands/`, 폰트·모델·효과음 파일은 개인 자료라 git 에 올리지 않습니다.
+`footage/`, `edit/`, `out/`, `reels/`, `brands/`, `_bundle/`, 폰트·모델·효과음 파일은 개인 자료라 git 에 올리지 않습니다.
 
 ## 참고
 - 레퍼런스: [choigpt-ai/retention-shorts](https://github.com/choigpt-ai/retention-shorts) — 구간 선정·세이프존 검수 발상

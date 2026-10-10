@@ -26,3 +26,6 @@ __pycache__/
 .DS_Store
 
 .claude/settings.local.json
+
+# 클라우드 세션용 묶음 (tools/cloud_bundle.sh, 개인 파일 포함)
+_bundle/

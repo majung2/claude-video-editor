@@ -12,7 +12,7 @@ spec.json 예시 (썸네일 담당이 작성):
       {"src": "footage/<id>/broll/IMG_0123.jpg", "title": "...", "pos": "lower"},
       {"src": "edit/<id>/final.mp4", "t": 31.0, "title": "..."}
     ]}
-    · align: left(기본) | center — 줄마다 가운데 정렬 (config/style.json 의 thumb_align 으로 기본값 변경 가능)
+    · align: left(기본) | center — 줄마다 가운데 정렬 (styles/<스타일>/thumb.json 의 thumb_align 으로 기본값 변경 가능)
     · title 의 \\n 은 줄바꿈, {중괄호} 는 강조색.  pos: upper | lower
     · src 가 영상이면 t(초) 필수, 사진이면 생략
 
@@ -45,8 +45,18 @@ FONT_DIRS = [ROOT / "assets" / "fonts", Path.home() / "Library" / "Fonts", Path(
              Path("/usr/share/fonts"), Path("C:/Windows/Fonts")]
 
 
-def load_style() -> dict:
-    p = ROOT / "config" / "style.json"
+def style_of(edit: Path | None = None) -> str:
+    """영상의 편집 스타일: edit/<id>/pipeline.json 의 "style" (job.py new --style), 없으면 gratitude."""
+    if edit is not None:
+        p = Path(edit) / "pipeline.json"
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8")).get("style") or "gratitude"
+    return "gratitude"
+
+
+def load_style(style: str = "gratitude") -> dict:
+    """썸네일 문구 모습: styles/<스타일>/thumb.json."""
+    p = ROOT / "styles" / style / "thumb.json"
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
@@ -63,7 +73,7 @@ def find_font(style: dict) -> Path:
                 if hits:
                     return hits[0]
     sys.exit("[오류] 세리프 폰트를 못 찾았어요. 젠세리프 폰트 파일을 assets/fonts/ 에 넣거나 "
-             "config/style.json 의 thumb_font 에 경로를 적어 주세요.")
+             "styles/<스타일>/thumb.json 의 thumb_font 에 경로를 적어 주세요.")
 
 
 def grab(src: Path, t: float | None, out: Path) -> Path:
@@ -271,7 +281,7 @@ def main() -> None:
     items = spec["items"]
     if len(items) != 3:
         print(f"  ! 후보가 {len(items)}개예요 (3개 권장)")
-    style = load_style()
+    style = load_style(spec.get("style") or style_of(edit))
     font = find_font(style)
     print(f"폰트: {font.name}")
     outs = []

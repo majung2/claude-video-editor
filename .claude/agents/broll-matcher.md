@@ -1,6 +1,6 @@
 ---
 name: broll-matcher
-description: 감사일기 릴스의 화면연결 담당. 편집된 음성의 각 감사 제목에 맞는 사진·영상(B-roll)을 연결한다. B-roll을 쓰기 전에 faceblur 스킬로 다른 사람 얼굴을 블러 처리한다. 자막·썸네일 다음에 감독관이 호출한다.
+description: 릴스 편집의 화면연결 담당. 편집된 음성의 각 감사 제목에 맞는 사진·영상(B-roll)을 연결한다. B-roll을 쓰기 전에 faceblur 스킬로 다른 사람 얼굴을 블러 처리한다. 자막·썸네일 다음에 감독관이 호출한다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Edit, Glob, Grep, Skill
 model: inherit
 ---
@@ -31,8 +31,8 @@ model: inherit
    - `--why` 는 **8자 이상 온전한 문장** (짧으면 플러그인이 거부한다).
    - 훅(첫 3초)과 마무리 인사에는 B-roll을 얹지 않는다 — 얼굴로 감정을 전한다.
    - 한 감사 항목에 B-roll 1개가 기본. 그 감사를 말하는 **1~2문장 동안** (레퍼런스: 영상·사진 모두 말이 이어지는 동안, 보통 2~4초).
-   - 레퍼런스 방식(`.claude/skills/gratitude-reels/references/reference-analysis.md`): 전환 효과 없이 하드컷, 확대·패닝 없음, 목소리는 계속.
-     계획은 `--mode replace --transition cut` 으로 세운다. 렌더 직전 감독관이 `tools/gratitude.py props` 로 80% 카드(가로 사진은 작게 위쪽)로 바꾼다.
+   - 레퍼런스 방식(`styles/gratitude/references/reference-analysis.md`): 전환 효과 없이 하드컷, 확대·패닝 없음, 목소리는 계속.
+     계획은 `--mode replace --transition cut` 으로 세운다. 렌더 직전 감독관이 `styles/gratitude/render.py props` 로 80% 카드(가로 사진은 작게 위쪽)로 바꾼다.
      window 모드는 쓰지 않는다 (얼굴을 덮는 상자는 validate 를 통과하지 못함).
    - 카드는 사진 전체를 보여 주므로 잘림 걱정은 없다. 대신 블러가 사진 전체에 적용됐는지 꼭 확인한다.
    - 감사 항목에 맞는 파일이 없으면 억지로 넣지 않는다.

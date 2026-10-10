@@ -1,6 +1,6 @@
 ---
 name: cut-editor
-description: 감사일기 릴스의 컷편집 담당. 다시 찍은 중복 테이크와 음성이 빈 구간을 오디오 기준으로 잘라내고, 고른 훅을 맨 앞에 붙인 러프컷을 만든다. plan 모드(컷 계획만)와 build 모드(실제 컷+검사)로 두 번 호출된다.
+description: 릴스 편집의 컷편집 담당. 다시 찍은 중복 테이크와 음성이 빈 구간을 오디오 기준으로 잘라내고, 고른 훅을 맨 앞에 붙인 러프컷을 만든다. plan 모드(컷 계획만)와 build 모드(실제 컷+검사)로 두 번 호출된다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Edit, Glob, Grep, Skill
 model: inherit
 ---

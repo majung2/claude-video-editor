@@ -9,7 +9,8 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
 담당자는 `.claude/agents/` 에 있다: `transcriber`(전사기) · `hooker`(후커) · `cut-editor`(컷편집) · `subtitler`(자막) · `thumbnail-maker`(썸네일) · `broll-matcher`(화면연결) · `audio-engineer`(오디오).
 편집 엔진은 로컬 플러그인 **IT Reelsmaker**, 노하우는 **Social Media Skills**, ffmpeg 보조는 **ffmpeg-llm**. 플러그인 스크립트는 항상 `python3 tools/plug.py rm <스크립트> …` 로 부른다.
 
-감사일기 형식·톤: `references/format.md` 를 먼저 읽는다. 목표 모습(레퍼런스 측정값)과 툴킷과의 차이는 `references/reference-analysis.md`.
+이 스킬은 편집 스타일 **gratitude(감사일기)** 의 감독관이다. 스타일 전용 파일은 모두 `styles/gratitude/` 에 있다 (설정 `config.json`, 썸네일 `thumb.json`, 렌더 모드 `render.py`, 레퍼런스 `references/`, 사용자 결정 `README.md`).
+감사일기 형식·톤: `styles/gratitude/references/format.md` 를 먼저 읽는다. 목표 모습(레퍼런스 측정값)과 툴킷과의 차이는 `styles/gratitude/references/reference-analysis.md`.
 
 ## 흐름
 
@@ -41,14 +42,14 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
      `python3 tools/fonts.py heading majunge` → 화면 훅 문구 = 젠세리프 (`assets/fonts/` 의 ZEN-SERIF 파일)
      `python3 tools/fonts.py subtitle majunge` → 자막 = 메모먼트 꾹꾹체 (`assets/fonts/subtitle/`)
      폰트 파일이 없으면 사용자에게 알리고(아이클라우드 `크리에이터` 폴더에 있음) 넣어 달라고 한 뒤 진행.
-   - 썸네일 폰트: `config/style.json` 의 `thumb_font` 또는 `assets/fonts/` 에 젠세리프 폰트가 있는지. 없으면 사용자에게 파일을 넣어 달라고 하고, 그동안은 시스템 명조체로 진행한다고 말한다.
+   - 썸네일 폰트: `styles/gratitude/thumb.json` 의 `thumb_font` 또는 `assets/fonts/` 에 젠세리프 폰트가 있는지. 없으면 사용자에게 파일을 넣어 달라고 하고, 그동안은 시스템 명조체로 진행한다고 말한다.
    - 효과음: `assets/sfx/` 가 비면 `python3 tools/sfx.py`
-   - **감사일기 렌더 모드**: `python3 tools/gratitude.py check` — 실패하면 `python3 tools/gratitude.py patch-kit`.
+   - **감사일기 렌더 모드**: `python3 styles/gratitude/render.py check` — 실패하면 `python3 styles/gratitude/render.py patch-kit`.
      (Remotion 프로젝트 `reels/` 를 `kit.py new` 로 처음 만든 뒤, 그리고 `kit.py update` 뒤에는 항상 다시 실행. `reels/` 는 git 에 없다)
 3. 영상 등록: 사용자가 준 메인 영상과 B-roll(없을 수 있음)로
-   `python3 tools/job.py new <id> --main <메인> --broll <파일이나 폴더…>` — id 는 날짜(`2026-10-09`), 같은 날 두 번째면 `2026-10-09-2`.
+   `python3 tools/job.py new <id> --main <메인> --broll <파일이나 폴더…> --style gratitude` — id 는 날짜(`2026-10-09`), 같은 날 두 번째면 `2026-10-09-2`.
 4. 스타일: `brands/majunge` 와 `reel-defaults.json` 기본값(스타일 Marker, 자막 typewriter, 인서트는 B-roll만)을 쓴다.
-   최종 모습은 7단계에서 `tools/gratitude.py props` 가 레퍼런스 모습(감사일기 자막·카드 B-roll)으로 바꾼다 — 자막 모드는 묻지 않는다.
+   최종 모습은 7단계에서 `styles/gratitude/render.py props` 가 레퍼런스 모습(감사일기 자막·카드 B-roll)으로 바꾼다 — 자막 모드는 묻지 않는다.
    (플러그인은 자막 모드로 accent/plate/typewriter/none 만 받으므로 reel.json 에는 typewriter 를 둔다)
 
 ## 1. 전사 → `transcriber`
@@ -83,11 +84,11 @@ B-roll 이 없으면 plan 모드가 init 만 하고 끝난다 — 그대로 6단
 IT Reelsmaker 8·9단계를 따른다 (필요하면 Skill 도구로 `it-reelsmaker` 를 불러 8~10단계를 읽는다).
 1. 브랜드 내보내기(처음·브랜드 수정 후): `python3 tools/plug.py rm brand export majunge --remotion reels`
 2. props: `python3 tools/plug.py rm visual_plan export edit/<id> --remotion reels --props edit/<id>/reelkit-props.json [--hook "<hook.json title, 중괄호 제거>"]`
-   이어서 **반드시** 감사일기 모습으로 바꾼다: `python3 tools/gratitude.py props edit/<id>/reelkit-props.json --edit edit/<id>`
+   이어서 **반드시** 감사일기 모습으로 바꾼다: `python3 styles/gratitude/render.py props edit/<id>/reelkit-props.json --edit edit/<id>`
    (자막 → 가운데·한 줄·외곽선 타자기식, B-roll → 80% 카드·하드컷, 가로 사진 → 작게 위쪽, 줌 없음. export 를 다시 하면 이것도 다시)
 3. 스틸 검수: 훅·각 B-roll 시작/중간·자막 몇 곳 프레임을 뽑아 Read 로 본다 —
    `cd reels && npx remotion still ReelKit --props=<절대경로>/edit/<id>/reelkit-props.json --frame=<N> out/still-<N>.png`
-   레퍼런스(`references/reference-analysis.md`)와 나란히 비교: 자막이 가운데 한 줄·흰 글자에 검은 외곽선, 단어가 제자리에 나타남, B-roll 은 얼굴 위 카드(하드컷), 줌 없음.
+   레퍼런스(`styles/gratitude/references/reference-analysis.md`)와 나란히 비교: 자막이 가운데 한 줄·흰 글자에 검은 외곽선, 단어가 제자리에 나타남, B-roll 은 얼굴 위 카드(하드컷), 줌 없음.
    볼 것: 얼굴 위 글자 없음, 자막이 하단 UI(y 1500 아래)·오른쪽 아이콘 줄에 안 걸림, B-roll 블러 유지, 자막 줄 수 2줄 이하.
 4. 렌더(따로 실행, 종료 코드 확인): `cd reels && npx remotion render ReelKit out/<id>.mp4 --props=<절대경로>/edit/<id>/reelkit-props.json`
    `--concurrency` 는 CPU 코어 수보다 크게 주지 않는다 (생략하면 자동).

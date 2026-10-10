@@ -1,14 +1,14 @@
-"""감독관용: 감사일기 영상 한 편(job)을 만들고 단계별 진행 상태를 기록한다.
+"""감독관용: 영상 한 편(job)을 만들고 단계별 진행 상태를 기록한다 (모든 편집 스타일 공용).
 
-    python3 tools/job.py new <id> --main <메인영상> [--broll <사진·영상 또는 폴더> ...]
+    python3 tools/job.py new <id> --main <메인영상> [--broll <사진·영상 또는 폴더> ...] [--style gratitude]
     python3 tools/job.py status <id>
     python3 tools/job.py mark <id> <단계> <pending|running|done|failed|skipped> [--note 메모]
 
 <id> 는 영상 이름 (예: 2026-10-09). 만들어지는 것:
     footage/<id>/main.<확장자>     카메라 보고 말하는 메인 영상
-    footage/<id>/broll/           감사 제목별 사진·영상 (없어도 됨)
+    footage/<id>/broll/           B-roll 사진·영상 (없어도 됨)
     edit/<id>/                    IT Reelsmaker 작업 폴더 (cut.json, captions.json, final.mp4 …)
-    edit/<id>/pipeline.json       단계별 담당자·상태
+    edit/<id>/pipeline.json       편집 스타일(style)과 단계별 담당자·상태
 """
 from __future__ import annotations
 
@@ -59,6 +59,9 @@ def cmd_new(a) -> None:
     foot, edit = ROOT / "footage" / a.id, ROOT / "edit" / a.id
     if edit.exists() and (edit / "pipeline.json").exists():
         sys.exit(f"[오류] 이미 있는 영상 id예요: {a.id}")
+    styles = sorted(p.name for p in (ROOT / "styles").iterdir() if (p / "README.md").exists())
+    if a.style not in styles:
+        sys.exit(f"[오류] 없는 편집 스타일이에요: {a.style} (있는 것: {', '.join(styles)})")
     (foot / "broll").mkdir(parents=True, exist_ok=True)
     edit.mkdir(parents=True, exist_ok=True)
     main = Path(a.main).expanduser()
@@ -78,7 +81,7 @@ def cmd_new(a) -> None:
             else:
                 shutil.copy2(f, foot / "broll" / f.name)
             n += 1
-    state = {"id": a.id, "created": datetime.now().isoformat(timespec="seconds"),
+    state = {"id": a.id, "style": a.style, "created": datetime.now().isoformat(timespec="seconds"),
              "main": str(dst_main.relative_to(ROOT)), "broll_dir": str((foot / "broll").relative_to(ROOT)),
              "broll_count": n,
              "steps": {k: {"owner": o, "status": "pending", "note": ""} for k, o in STEPS}}
@@ -96,7 +99,7 @@ def load(id_: str) -> tuple[Path, dict]:
 def cmd_status(a) -> None:
     _, st = load(a.id)
     icon = {"pending": "·", "running": "▶", "done": "✓", "failed": "✗", "skipped": "–"}
-    print(f"[{st['id']}] 메인 {st['main']} / B-roll {st['broll_count']}개")
+    print(f"[{st['id']}] 스타일 {st.get('style', 'gratitude')} / 메인 {st['main']} / B-roll {st['broll_count']}개")
     for k, v in st["steps"].items():
         note = f"  — {v['note']}" if v.get("note") else ""
         print(f"  {icon.get(v['status'], '?')} {k:<10} {v['owner']}{note}")
@@ -116,7 +119,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     n = sp.add_parser("new"); n.add_argument("id"); n.add_argument("--main", required=True)
-    n.add_argument("--broll", nargs="*"); n.set_defaults(fn=cmd_new)
+    n.add_argument("--broll", nargs="*")
+    n.add_argument("--style", default="gratitude", help="편집 스타일 = styles/ 아래 폴더 이름 (기본 gratitude: 감사일기)")
+    n.set_defaults(fn=cmd_new)
     s = sp.add_parser("status"); s.add_argument("id"); s.set_defaults(fn=cmd_status)
     m = sp.add_parser("mark"); m.add_argument("id"); m.add_argument("step")
     m.add_argument("status", choices=["pending", "running", "done", "failed", "skipped"])

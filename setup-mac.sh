@@ -51,7 +51,9 @@ ls assets/fonts/subtitle/* >/dev/null 2>&1 && ok "메모먼트 꾹꾹체 (자막
 
 step 5 "환경 점검 (doctor)"
 python3 tools/plug.py doctor
-# 감사일기 레퍼런스 모습(가운데 자막·외곽선·B-roll 카드)을 키트에 넣는다. reels/ 가 아직 없으면 첫 실행 때 감독관이 한다
-[ -f reels/src/ReelKit.tsx ] && python3 tools/gratitude.py patch-kit || true
+# 편집 스타일마다 렌더 엔진 패치를 넣는다 (styles/<스타일>/render.py patch-kit). reels/ 가 아직 없으면 첫 실행 때 감독관이 한다
+if [ -f reels/src/ReelKit.tsx ]; then
+  for r in styles/*/render.py; do python3 "$r" patch-kit || true; done
+fi
 echo
 echo "다음: 폰에서 원격으로 쓰려면  bash $ROOT/start-remote.sh"

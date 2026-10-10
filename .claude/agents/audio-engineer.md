@@ -1,6 +1,6 @@
 ---
 name: audio-engineer
-description: 감사일기 릴스의 오디오 담당. 장면 전환과 감사 항목 등장에 효과음을 넣고, 배경음(BGM)을 골라 목소리 아래로 깔리게 믹스 계획을 만든다. 실제 마스터링은 렌더 뒤 감독관이 이 계획대로 실행한다.
+description: 릴스 편집의 오디오 담당. 장면 전환과 감사 항목 등장에 효과음을 넣고, 배경음(BGM)을 골라 목소리 아래로 깔리게 믹스 계획을 만든다. 실제 마스터링은 렌더 뒤 감독관이 이 계획대로 실행한다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Edit, Glob, Grep, Skill
 model: inherit
 ---
@@ -26,8 +26,8 @@ model: inherit
    시각은 captions.json 단어 `start`(렌더 기준 초). 말과 겹치는 큰 소리 금지.
    `edit/<id>/sfx.json`:
    `{"below_voice_db": 15, "sounds": [{"file": "assets/sfx/pop.wav", "at": 4.73, "start": 0.0, "what": "감사1 등장"}]}`
-   이어서 **반드시** `python3 tools/gratitude.py keys --edit edit/<id>` — 훅 자막이 한 글자씩 나올 때마다 키보드 소리(key),
-   "감사합니다"를 말하기 시작하는 순간마다 뽁(pop)을 넣는다 (사용자 결정 2026-10-10 — 소리·위치·크기는 config/gratitude.json sounds).
+   이어서 **반드시** `python3 styles/gratitude/render.py keys --edit edit/<id>` — 훅 자막이 한 글자씩 나올 때마다 키보드 소리(key),
+   "감사합니다"를 말하기 시작하는 순간마다 뽁(pop)을 넣는다 (사용자 결정 2026-10-10 — 소리·위치·크기는 styles/gratitude/config.json sounds).
    마지막 "감사합니다"에는 ding 을 넣지 않는다. 감사 2·3 등장 pop 은 이 소리와 겹치므로 넣지 않는다 (감사 1 등장만).
    효과음이 많으니 `below_voice_db` 는 18 로 둔다 (15 면 효과음이 목소리와 겹쳐 피크 −1dB 를 넘었다).
 3. **배경음** — `assets/music/` 에서 잔잔하고 따뜻한 곡 (가사 없는 곡 우선). 없으면 BGM 없이 간다 (지어내거나 다운로드하지 않는다).

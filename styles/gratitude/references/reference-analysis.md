@@ -41,7 +41,7 @@ iCloud `크리에이터/감사일기/레퍼런스/` 의 레퍼런스 릴스 2개
 
 ## 4. 툴킷에서 레퍼런스대로 만드는 방법
 키트(`reels/src`)에 감사일기 모드를 더해서 레퍼런스와 같게 렌더한다. 플러그인 스크립트는 그대로 두고,
-플러그인이 만든 렌더 설정(props)을 `tools/gratitude.py` 가 바꾼다 — 플러그인을 업데이트해도 유지된다.
+플러그인이 만든 렌더 설정(props)을 `styles/gratitude/render.py` 가 바꾼다 — 플러그인을 업데이트해도 유지된다.
 
 | 레퍼런스 | 툴킷 |
 |---|---|
@@ -52,9 +52,9 @@ iCloud `크리에이터/감사일기/레퍼런스/` 의 레퍼런스 릴스 2개
 | 줌·카메라 무빙 없음 | `drift: false`, 가상 카메라 제거 |
 | 긴 쉼 자르기 | 컷편집 페이싱 tight |
 
-순서: 플러그인 `visual_plan export --props` → `python3 tools/gratitude.py props edit/<id>/reelkit-props.json --edit edit/<id>` → 렌더.
+순서: 플러그인 `visual_plan export --props` → `python3 styles/gratitude/render.py props edit/<id>/reelkit-props.json --edit edit/<id>` → 렌더.
 계획 단계(visual_plan add)에서는 B-roll 을 `replace` 로 둔다 — 플러그인 검증은 얼굴을 덮는 카드를 거부하므로, 카드는 렌더 직전에만 바꾼다.
-값 조정: `config/gratitude.json`. 키트를 `kit.py new`/`update` 한 뒤에는 `python3 tools/gratitude.py patch-kit` 를 다시 실행한다.
+값 조정: `styles/gratitude/config.json`. 키트를 `kit.py new`/`update` 한 뒤에는 `python3 styles/gratitude/render.py patch-kit` 를 다시 실행한다.
 
 ### 일부러 레퍼런스와 다르게 두는 것 (사용자 결정, 2026-10-09)
 레퍼런스에 맞춰 "고치지" 않는다.

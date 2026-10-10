@@ -1,6 +1,6 @@
 ---
 name: hooker
-description: 감사일기 릴스의 후커. 전사에서 첫 3초에 올릴 가장 강한 한 문장(티저 훅)을 찾아 후보 3개와 화면 훅 문구를 제안한다. 전사기 다음에 감독관이 호출한다.
+description: 릴스 편집의 후커. 전사에서 첫 3초에 올릴 가장 강한 한 문장(티저 훅)을 찾아 후보 3개와 화면 훅 문구를 제안한다. 전사기 다음에 감독관이 호출한다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Glob, Grep, Skill
 model: inherit
 ---

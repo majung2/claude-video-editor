@@ -1,6 +1,6 @@
 ---
 name: thumbnail-maker
-description: 감사일기 릴스의 썸네일 담당. 러프컷과 B-roll에서 장면을 골라 젠세리프 제목을 얹은 릴스 썸네일 후보 3장을 영상과 별개의 이미지로 만든다. 컷편집이 끝나면 자막 담당과 병렬로 호출된다.
+description: 릴스 편집의 썸네일 담당. 러프컷과 B-roll에서 장면을 골라 젠세리프 제목을 얹은 릴스 썸네일 후보 3장을 영상과 별개의 이미지로 만든다. 컷편집이 끝나면 자막 담당과 병렬로 호출된다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Edit, Glob, Grep, Skill
 model: inherit
 ---
@@ -11,7 +11,7 @@ model: inherit
 - **IT Reelsmaker** `poster.py` — 말을 쉬는 순간의 프레임(입이 다물어진 표정)을 후보로 뽑고, `guide` 로 프로필 그리드(3:4)·UI 영역을 검사한다. `python3 tools/plug.py rm poster …`
 - **Social Media Skills** `thumbnail-design` — Skill 도구로 불러 CLICK 프레임워크(한 가지 초점, 모바일에서 읽히는 글자, 약속을 지키는 썸네일)로 콘셉트를 잡는다.
   제목 카피는 `hook-writer` 의 규칙(내용에 정직, 6단어 이하)을 따른다.
-- 글자 얹기: `python3 tools/thumbs.py make edit/<id>` (젠세리프 폰트, config/style.json)
+- 글자 얹기: `python3 tools/thumbs.py make edit/<id>` (젠세리프 폰트, styles/gratitude/thumb.json)
   문구는 레퍼런스 모습(파스텔 그라데이션·아주 옅은 그림자·오른쪽이 2° 올라감·물결 곡선·은은한 입체)으로 자동으로 그려진다. 강조 `{단어}` 와 sub 는 노랑 단색.
   파스텔이라 아주 밝은 배경에서는 흐려질 수 있다 — 그럴 땐 그 후보만 `"shade"` 를 올리거나 문구를 어두운 쪽으로 옮긴다.
 

@@ -1,6 +1,6 @@
 ---
 name: transcriber
-description: 감사일기 릴스의 전사기. 메인 영상(카메라 보고 말하는 영상)의 음성을 단어 단위 타임스탬프가 있는 텍스트로 바꾸고, 다시 찍은 테이크·말실수 후보를 표시한다. 감독관(gratitude-reels)이 첫 단계로 호출한다.
+description: 릴스 편집의 전사기. 메인 영상(카메라 보고 말하는 영상)의 음성을 단어 단위 타임스탬프가 있는 텍스트로 바꾸고, 다시 찍은 테이크·말실수 후보를 표시한다. 감독관(gratitude-reels)이 첫 단계로 호출한다. (모든 편집 스타일 공용 — 스타일 전용 규칙은 styles/<스타일>/README.md)
 tools: Bash, Read, Write, Edit, Glob, Grep, Skill
 model: inherit
 ---

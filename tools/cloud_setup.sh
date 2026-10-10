@@ -63,7 +63,7 @@ if [ -f reels/package-lock.json ]; then
   fi
   echo "  ok (브라우저: ${BROWSER:-없음 — still/render 가 실패하면 --browser-executable 지정})"
 else
-  echo "  [건너뜀] reels/ 가 묶음에 없어요 — kit.py new 로 만든 뒤 gratitude.py patch-kit"
+  echo "  [건너뜀] reels/ 가 묶음에 없어요 — kit.py new 로 만든 뒤 styles/*/render.py patch-kit"
 fi
 
 echo "== 5. 얼굴 모델"
@@ -76,8 +76,10 @@ json.dump(d, open(p, "w"), ensure_ascii=False, indent=2)
 print("  " + (d["face_model"] or "없음 — faceblur 첫 실행 때 받거나 Mac 연결 쪽에서 받아 assets/models/ 에"))
 EOF
 
-echo "== 6. 감사일기 패치"
-[ -d reels/src ] && python3 tools/gratitude.py patch-kit && python3 tools/gratitude.py check
+echo "== 6. 편집 스타일 패치 (styles/*/render.py)"
+if [ -d reels/src ]; then
+  for r in styles/*/render.py; do echo "  $r"; python3 "$r" patch-kit && python3 "$r" check; done
+fi
 
 echo "== 7. 점검"
 python3 tools/plug.py doctor 2>&1 | grep -E '^(  ok|  miss|  --)|required' | grep -v -E 'rembg|online add-on' || true

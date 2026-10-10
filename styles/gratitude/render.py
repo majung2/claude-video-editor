@@ -1,19 +1,19 @@
 """[감사일기 전용] IT Reelsmaker 키트를 감사일기 레퍼런스 모습으로 렌더하게 하는 도구.
 
-레퍼런스(.claude/skills/gratitude-reels/references/reference-analysis.md)와 똑같이 만들려고
+레퍼런스(styles/gratitude/references/reference-analysis.md)와 똑같이 만들려고
   · 자막: 가운데 정렬 · 한 줄 · 흰 글자 + 얇은 검은 외곽선 · 세로 중심 y≈74.5% · 제자리 타자기식 등장
   · B-roll: 화면 80% 크기 카드(사진 전체가 보이게)로 얼굴 위에 하드컷, 줌 없음 · 가로 사진은 작게 위쪽(y≈40%)
   · 화면 전체: 줌(drift)·가상 카메라 없음
 을 키트에 더한다. 플러그인(visual_plan.py 등)은 고치지 않는다 — 플러그인이 만든 결과(props)를 이 도구가 바꾼다.
 그래서 플러그인을 업데이트해도 그대로 쓸 수 있다.
 
-    python3 tools/gratitude.py patch-kit [--remotion reels]   키트에 감사일기 모드를 넣는다 (이미 있으면 그대로)
-    python3 tools/gratitude.py check     [--remotion reels]   키트에 감사일기 모드가 있는지 확인 (없으면 종료 코드 1)
-    python3 tools/gratitude.py props edit/<id>/reelkit-props.json [--edit edit/<id>] [--remotion reels]
+    python3 styles/gratitude/render.py patch-kit [--remotion reels]   키트에 감사일기 모드를 넣는다 (이미 있으면 그대로)
+    python3 styles/gratitude/render.py check     [--remotion reels]   키트에 감사일기 모드가 있는지 확인 (없으면 종료 코드 1)
+    python3 styles/gratitude/render.py props edit/<id>/reelkit-props.json [--edit edit/<id>] [--remotion reels]
                                                               visual_plan export 결과를 감사일기 모습으로 바꾼다
 
 `kit.py update` 로 키트를 새로 받으면 감사일기 모드가 지워진다 → `patch-kit` 를 다시 실행한다.
-설정값(글자 크기·위치·카드 크기 등)은 config/gratitude.json.
+설정값(글자 크기·위치·카드 크기·훅·효과음 등)은 같은 폴더의 config.json, 썸네일 문구 모습은 thumb.json.
 """
 from __future__ import annotations
 
@@ -24,8 +24,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-CONFIG = ROOT / "config" / "gratitude.json"
+STYLE = Path(__file__).resolve().parent          # styles/gratitude/
+ROOT = STYLE.parent.parent                        # 툴킷 루트
+CONFIG = STYLE / "config.json"
 MARK = "majunge patch"
 
 DEFAULTS = {
@@ -364,7 +365,7 @@ def cmd_check(a) -> None:
     rem = remotion_dir(a.remotion)
     miss = status(rem)
     if miss:
-        print("키트에 감사일기 모드가 없어요 (kit.py update 뒤라면 정상) → python3 tools/gratitude.py patch-kit")
+        print("키트에 감사일기 모드가 없어요 (kit.py update 뒤라면 정상) → python3 styles/gratitude/render.py patch-kit")
         print("\n".join("  - " + m for m in miss))
         sys.exit(1)
     print(f"키트 감사일기 모드: OK ({rem})")
@@ -487,7 +488,7 @@ def cmd_props(a) -> None:
     rem = remotion_dir(a.remotion)
     miss = status(rem)
     if miss:
-        sys.exit("[오류] 키트에 감사일기 모드가 없어요 → python3 tools/gratitude.py patch-kit 먼저")
+        sys.exit("[오류] 키트에 감사일기 모드가 없어요 → python3 styles/gratitude/render.py patch-kit 먼저")
     c = config()
     p = Path(a.props)
     props = json.loads(p.read_text(encoding="utf-8"))
@@ -498,7 +499,7 @@ def cmd_props(a) -> None:
     props["hook"] = None  # (pop 하면 템플릿 기본 문구가 나온다) 위쪽 훅 문구 대신 훅 자막(gratitudeHook) — 사용자 결정 2026-10-09
     hook_end = hook_until(Path(a.edit)) if a.edit else None
     if hook_end and c.get("hook"):
-        style_json = ROOT / "config" / "style.json"
+        style_json = STYLE / "thumb.json"
         grad = json.loads(style_json.read_text(encoding="utf-8")).get("thumb_gradient") if style_json.exists() else None
         props["gratitudeHook"] = {**c["hook"], "until": round(hook_end, 3), **({"gradient": grad} if grad else {})}
         # 훅 문구와 겹치지 않게 숨겨 두던 창은 이제 필요 없다 (훅 자막이 그 자리)

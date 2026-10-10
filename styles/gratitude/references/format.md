@@ -17,13 +17,13 @@
 ## 화면 (레퍼런스 기준)
 - 셀카 토킹헤드 한 테이크. 제목 카드·스티커·이모지·밈·디자인 장면 없음. 줌·가상 카메라 무빙 없음.
 - 전환은 전부 하드컷 (`cut`). B-roll 도 효과 없이 바로 나타나고 사라진다.
-- B-roll 은 얼굴 위에 뜨는 80% 크기 카드 (사진 전체가 보이게). 가로 사진은 작게 위쪽. 계획은 `replace` 로 세우고, 렌더 직전 `tools/gratitude.py props` 가 카드로 바꾼다.
+- B-roll 은 얼굴 위에 뜨는 80% 크기 카드 (사진 전체가 보이게). 가로 사진은 작게 위쪽. 계획은 `replace` 로 세우고, 렌더 직전 `styles/gratitude/render.py props` 가 카드로 바꾼다.
 - 말 사이 긴 쉼은 잘라 템포를 빠르게 (레퍼런스: 쉼 0.36초 이상 → 앞뒤 0.18초만).
 
 ## 자막 (레퍼런스 기준)
 - 감사일기 자막(`gratitude`): 가운데 정렬 한 줄, 문장이 자리를 먼저 잡고 단어가 말에 맞춰 제자리에 나타난다. 문장 사이 짧게 비움.
 - 폰트 메모먼트 꾹꾹체 78px, 흰 글자 + 얇은 검은 외곽선 + 옅은 그림자. 세로 중심 y 1430 (74.5%). 한 줄에 안 들어가면 한 줄씩 나눠 차례로.
-- 설정은 `config/gratitude.json`. 계획 단계 reel.json 의 자막 모드는 typewriter 로 두고, 렌더 직전 `tools/gratitude.py props` 가 바꾼다.
+- 설정은 `styles/gratitude/config.json`. 계획 단계 reel.json 의 자막 모드는 typewriter 로 두고, 렌더 직전 `styles/gratitude/render.py props` 가 바꾼다.
 - B-roll 이 떠 있어도 자막은 계속 보인다 (훅 문구가 뜨는 첫 2.4초만 숨김).
 
 ## 톤
@@ -35,7 +35,7 @@
 ## 썸네일
 - 젠세리프 폰트, 2줄 이하, 강조 단어 1개(따뜻한 노랑).
 - 문구 모습은 레퍼런스 썸네일과 같게 (사용자 결정): 파스텔 그라데이션(민트→크림→연분홍·라벤더→크림→민트) · 아주 옅은 그림자 · 오른쪽이 살짝(2°) 올라감 + 글자 줄이 물결처럼 살짝 출렁이는 곡선 + 은은한 입체(엠보싱: 왼쪽 위 가장자리 밝게, 오른쪽 아래 살짝 어둡게, 1px 두께).
-  `tools/thumbs.py` 가 `config/style.json` 의 `thumb_gradient`·`thumb_shadow`·`thumb_tilt`·`thumb_wave`·`thumb_bevel` 로 자동 적용한다.
+  `tools/thumbs.py` 가 `styles/gratitude/thumb.json` 의 `thumb_gradient`·`thumb_shadow`·`thumb_tilt`·`thumb_wave`·`thumb_bevel` 로 자동 적용한다.
 - 베스트 장면: 표정이 살아 있는 프레임 또는 대표 감사의 B-roll(블러된 것만).
 - 후보 3장을 서로 다른 콘셉트로.
 

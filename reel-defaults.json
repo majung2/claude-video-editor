@@ -14,5 +14,15 @@
     "use_scenes": false,
     "footage_dirs": [],
     "subtitles": "typewriter"
+  },
+  "intensity": {
+    "photo-run": {
+      "label": "photo-run",
+      "broll_per_30s": 6,
+      "memes_max": 0,
+      "coverage_max": 0.4,
+      "min_gap_s": 0.0,
+      "_comment": "감사일기: 한 감사 항목의 사진 여러 장을 이어 붙일 때 (사용자 결정 2026-10-10, 10.7 돈까스→젤라또)"
+    }
   }
 }

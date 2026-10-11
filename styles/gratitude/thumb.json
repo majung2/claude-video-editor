@@ -3,15 +3,56 @@
   "thumb_font": "",
   "_thumb_font": "젠세리프 폰트 파일 경로 (.ttf/.otf). 비우면 assets/fonts → 시스템 명조체 순으로 자동으로 찾는다.",
   "thumb_size": 112,
-  "thumb_color": [255, 255, 255],
-  "thumb_accent": [255, 214, 120],
-  "thumb_shade": 150,
+  "thumb_color": [
+    255,
+    255,
+    255
+  ],
+  "thumb_accent": [
+    255,
+    214,
+    120
+  ],
+  "thumb_shade": 105,
   "_thumb_look": "레퍼런스 썸네일 문구 모습: 가로 파스텔 그라데이션(민트→크림→연분홍·라벤더→크림→민트, 글자 덩어리 폭에 맞춤) · 아주 옅은 그림자 · 오른쪽이 살짝 올라가게(도). 강조 {단어}·sub 는 thumb_accent 단색. 그라데이션을 비우면 thumb_color 단색",
-  "thumb_gradient": ["#DDF0D2", "#FFF6E6", "#F6D3E3", "#E8DAF2", "#FFF6E6", "#DDF0D2"],
+  "thumb_gradient": [
+    "#DDF0D2",
+    "#FFF6E6",
+    "#F6D3E3",
+    "#E8DAF2",
+    "#FFF6E6",
+    "#DDF0D2"
+  ],
   "thumb_tilt": 2.0,
   "_thumb_wave": "글자 줄의 물결 곡선: amp 높이(px, 양수 = 앞부분이 먼저 올라감), periods 물결 수(문구 폭 기준), phase 시작 위치(라디안). amp 0 = 곡선 없음",
-  "thumb_wave": {"amp": 10, "periods": 1.0, "phase": 0.0},
+  "thumb_wave": {
+    "amp": 10,
+    "periods": 1.0,
+    "phase": 0.0
+  },
   "_thumb_bevel": "입체(엠보싱): strength 가장자리 밝기·어둡기 세기(0 = 끔), dark 어두운 쪽 비율, blur 경사 폭(px), depth 두께(px), side 두께 면의 밝기(1 = 같은 색)",
-  "thumb_bevel": {"strength": 0.3, "dark": 0.2, "blur": 2.0, "depth": 1, "side": 0.93},
-  "thumb_shadow": {"alpha": 0.22, "blur": 6, "dx": 3, "dy": 4, "color": "#000000"}
+  "thumb_bevel": {
+    "strength": 0.3,
+    "dark": 0.2,
+    "blur": 2.0,
+    "depth": 1,
+    "side": 0.93
+  },
+  "thumb_shadow": {
+    "alpha": 0.22,
+    "blur": 6,
+    "dx": 3,
+    "dy": 4,
+    "color": "#000000"
+  },
+  "thumb_shade_style": "fade",
+  "thumb_glow": {
+    "width": 0.62,
+    "pad": 170,
+    "blur": 130
+  },
+  "_thumb_shade_style": "fade = 아래쪽으로 길고 완만하게 어두워지는 연한 그라데이션(최대 약 40%, 사용자 결정 2026-10-10) / glow = 글자 둘레 타원 / band = 예전 띠",
+  "thumb_fade": {
+    "span": 700
+  }
 }

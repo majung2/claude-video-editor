@@ -390,7 +390,7 @@ def cmd_apply(a) -> None:
             h, w = first.shape[:2]
             enc = subprocess.Popen(
                 ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{w}x{h}",
-                 "-r", f"{fps:.5f}", "-i", "-", "-i", str(f), "-map", "0:v", "-map", "1:a?",
+                 "-r", f"{fps:.5f}", "-i", "-", "-i", str(f), "-map", "0:v", "-map", "1:a:0?",
                  "-c:v", "libx264", "-crf", "17", "-preset", "medium", "-pix_fmt", "yuv420p",
                  "-c:a", "aac", "-shortest", str(dst)], stdin=subprocess.PIPE)
             for t, img in [(t0, first), *it]:

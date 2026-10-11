@@ -101,7 +101,7 @@ def parse_runs(line: str) -> list[tuple[str, bool]]:
 
 
 def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, idx: int) -> None:
-    from PIL import Image, ImageDraw, ImageFont, ImageOps
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
     src = (ROOT / item["src"]) if not Path(item["src"]).is_absolute() else Path(item["src"])
     if not src.exists():
         sys.exit(f"[오류] 소스가 없어요: {src}")
@@ -126,9 +126,29 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     sd = ImageDraw.Draw(shade)
     a, b = (0, y0 + block_h + 220) if upper else (y0 - 220, H)
     strength = item.get("shade", style.get("thumb_shade", 150))
-    for y in range(max(0, a), min(H, b)):
-        edge = (b - y) if upper else (y - a)
-        sd.line([(0, y), (W, y)], fill=int(strength * min(1.0, edge / 220)))
+    if style.get("thumb_shade_style", "band") == "glow":
+        # 글자 덩어리 둘레로만 타원형으로 어둡게 깔고 크게 흐려 가장자리가 보이지 않게 (사용자 결정 2026-10-10: 더 자연스럽게)
+        g = style.get("thumb_glow", {})
+        cy = y0 + block_h / 2
+        rx, ry = W * g.get("width", 0.62), block_h / 2 + g.get("pad", 170)
+        sd.ellipse([W / 2 - rx, cy - ry, W / 2 + rx, cy + ry], fill=int(strength))
+        shade = shade.filter(ImageFilter.GaussianBlur(g.get("blur", 130)))
+    elif style.get("thumb_shade_style") == "fade":
+        # 위→아래(또는 아래→위)로 아주 길고 완만하게 어두워지는 그라데이션 (사용자 결정 2026-10-10: 띠 경계 없이, 연하게)
+        g = style.get("thumb_fade", {})
+        span = g.get("span", 700)
+        if upper:
+            a2, b2 = 0, y0 + block_h + span
+        else:
+            a2, b2 = y0 - span, H
+        for y in range(max(0, a2), min(H, b2)):
+            t = ((b2 - y) if upper else (y - a2)) / max(1, b2 - a2)
+            t = t * t * (3 - 2 * t)  # smoothstep
+            sd.line([(0, y), (W, y)], fill=int(strength * t))
+    else:
+        for y in range(max(0, a), min(H, b)):
+            edge = (b - y) if upper else (y - a)
+            sd.line([(0, y), (W, y)], fill=int(strength * min(1.0, edge / 220)))
     img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), img, shade)
 
     # 글자는 마스크에 먼저 그린다: 본문(그라데이션) / 강조·sub(강조색) — 레퍼런스 썸네일 문구 모습

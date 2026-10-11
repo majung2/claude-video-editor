@@ -6,6 +6,7 @@
 | 스타일 | 폴더 | 감독관 스킬 | 상태 |
 |---|---|---|---|
 | 감사일기 | [`gratitude/`](gratitude/README.md) | `/gratitude-reels` | 사용 중 |
+| 자유형식 | [`free/`](free/README.md) | `/free-reels` | 새로 추가 (2026-10-11) — 썸네일 형식·훅·컷·자막은 공통(감사일기 방식), 나머지는 영상마다 사용자 지시대로 |
 
 ## 스타일 폴더에 들어가는 것
 
@@ -13,7 +14,7 @@
 |---|---|---|
 | `README.md` | ✓ | 스타일 소개, 기본 모습 표, **사용자가 정한 것**. 이 파일이 있어야 `job.py new --style` 이 스타일로 인식 |
 | `config.json` | 보통 | 자막·훅·B-roll·효과음 등 스타일 기본값 |
-| `thumb.json` | 썸네일을 쓰면 | 썸네일 문구 모습 — `tools/thumbs.py` 가 영상의 스타일에 맞춰 읽음 |
+| `thumb.json` | 썸네일을 쓰면 | `{"extends": "common"}` + 이 스타일만 다른 칸 — 공통 스펙은 `config/thumb.json` (`tools/thumbs.py` 가 읽음) |
 | `render.py` | 엔진 모습을 바꾸면 | `patch-kit` / `check` / `props` (감사일기 `render.py` 참고) |
 | `references/` | 선택 | 레퍼런스 분석, 형식 규칙 |
 

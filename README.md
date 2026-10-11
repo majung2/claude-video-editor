@@ -17,6 +17,7 @@
 | 스타일 | 어떤 영상 | 감독관 | 문서 |
 |---|---|---|---|
 | **감사일기** (`gratitude`) | 셀카로 그날의 감사한 일 3~4가지를 말하는 영상 | `/gratitude-reels` | [styles/gratitude/README.md](styles/gratitude/README.md) |
+| **자유형식** (`free`) | 아무 영상 + 편집 지시. 썸네일 형식·훅·컷·자막은 항상 감사일기 방식, 나머지("앞 3초 잘라줘, 사진 꽉 차게…")는 지시대로 | `/free-reels` | [styles/free/README.md](styles/free/README.md) |
 
 스타일마다 자막 모습, 훅 연출, 효과음, 썸네일 문구 모습, 형식(구성·길이)이 다릅니다.
 새 스타일을 더하는 방법은 [styles/README.md](styles/README.md) 에 있습니다.
@@ -33,6 +34,7 @@ Mac에서 Claude 데스크톱 앱을 켜 두고, Claude 앱(데스크톱·웹·�
 
 ```
 감사일기 툴킷으로 10.7 감사일기 편집해줘
+자유형식으로 이 영상 편집해줘. 앞 3초 자르고, 사진은 꽉 차게, 끝에 팔로우 문구
 ```
 
 - 편집은 Anthropic 클라우드 작업 공간에서 돌아가고, Mac의 툴킷 폴더와는 **Claude 데스크톱 앱 연결**로 파일을 주고받습니다.
@@ -126,7 +128,7 @@ CLAUDE.md              Claude가 읽는 공용 규칙 — 클라우드 세션 �
 | `tools/plug.py` | 플러그인 찾기·점검(`doctor`)·IT Reelsmaker 스크립트 실행 |
 | `tools/job.py` | 영상 등록(`--style`), 단계별 진행 상태 |
 | `tools/faceblur.py` | 얼굴 검출(YuNet)·트래킹·블러·확인 시트 |
-| `tools/thumbs.py` | 썸네일 문구 얹기 + 비교 시트 — 영상 스타일의 `thumb.json` 을 읽음 |
+| `tools/thumbs.py` | 썸네일 문구 얹기 + 비교 시트 — 공통 스펙 `config/thumb.json`(스타일 `thumb.json` 이 덮어씀), 얼굴 자동 검출로 얼굴 바로 아래 배치 |
 | `tools/subs_preview.py` | 렌더 전 자막 끊김 미리보기 |
 | `tools/sfx.py` | 효과음 합성 (whoosh·pop·ding·rise + 키보드 타닥 4종·마우스 딸깍) |
 | `tools/fonts.py` | 영상 안 폰트 지정 |

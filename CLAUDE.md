@@ -8,6 +8,7 @@
 | 스타일 | 폴더 | 감독관 스킬 | 상태 |
 |---|---|---|---|
 | 감사일기 (`gratitude`) | `styles/gratitude/` | `/gratitude-reels` | 사용 중 (10.6 편집으로 검증) |
+| 자유형식 (`free`) | `styles/free/` | `/free-reels` | 새로 추가 — 공통 스펙(썸네일 형식·훅·컷·자막)은 항상 감사일기 방식, 나머지는 지시서 `edit/<id>/brief.json` 대로. 엔진 패치 없음 |
 
 - **영상을 시작할 때 스타일을 정한다:** `python3 tools/job.py new <id> --main … --style <스타일>` → `edit/<id>/pipeline.json` 의 `style`.
   이후 모든 단계는 그 스타일의 `styles/<스타일>/README.md`(사용자 결정)·`config.json`·감독관 스킬을 따른다.
@@ -15,7 +16,7 @@
 - 새 스타일 추가 방법: `styles/README.md`.
 
 ## 시작
-- 감사일기 전체 편집: `/gratitude-reels`. 한 단계만: "자막만 다시 해줘" 처럼 말하면 감독관이 그 단계부터 이어 간다.
+- 감사일기 전체 편집: `/gratitude-reels`. 지시대로 하는 편집: `/free-reels`. 한 단계만: "자막만 다시 해줘" 처럼 말하면 감독관이 그 단계부터 이어 간다.
 - B-roll 얼굴 블러만: `/faceblur` (공용)
 
 ## 역할 (공용 — 스타일마다 감독관만 다르다)
@@ -46,6 +47,7 @@
 ## 폴더
 ```
 styles/<스타일>/             스타일 전용: README.md(결정) · config.json · thumb.json · render.py · references/
+config/thumb.json            썸네일 문구 공통 스펙 (모든 스타일)
 footage/<id>/main.*          메인 영상 (원본 복사본)
 footage/<id>/broll/          B-roll 원본      → broll_blur/ 얼굴 블러본
 edit/<id>/                   IT Reelsmaker 작업 폴더 + pipeline.json(스타일·진행 상태)
@@ -90,6 +92,8 @@ Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 
 
 ### 사용자가 정한 것 (모든 스타일)
 - 결과물 = 영상 1개 + 썸네일(후보를 보여 주고 고른 1장). 썸네일은 영상 첫 프레임에 넣지 않는다.
+- **썸네일 문구 모습은 모든 스타일 공통** — `config/thumb.json` (2026-10-11, 레퍼런스 "ENTP가 INFP를 좋아하는 이유"): 왼쪽 정렬, 얼굴 바로 아래, 펄 그라데이션, 입체,
+  굴곡은 왼쪽 아래에서 시작해 오른쪽 위에서 끝남(세기 24). 장면은 원본 전체에서 얼굴이 화면 위쪽인 프레임 우선. 스타일 `thumb.json` 은 `extends: common` + 바꿀 칸만.
 - 컷: 더듬은 곳·같은 말 반복은 전부 뺀다 — 늘어진 단어는 재전사로 반드시 확인.
 - B-roll: 다른 사람 얼굴은 블러(본인은 남김), 화상 통화 캡처는 이름표·UI 를 잘라낸다.
 - 새 효과음은 미리 듣기용 파일로 먼저 확인받은 뒤 영상에 입힌다.

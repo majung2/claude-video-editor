@@ -1,0 +1,91 @@
+{
+  "_comment": "자유형식 스타일 설정 (styles/free/render.py). 영상마다 사용자 지시는 edit/<id>/brief.json 에 적는다.",
+
+  "_common": "공통 스펙 (사용자 결정 2026-10-11) — 지시와 상관없이 모든 자유형식 영상에 감사일기 방식으로 항상 들어간다: 썸네일 형식 · 훅 · 컷 · 자막. 지시서가 이 칸을 다르게 적어도 무시하고 경고한다. 한 편만 끄려면 사용자가 분명히 말한 뒤 brief.json common_off 에 이름을 적는다(subtitles·hook·cut·thumbnail). 세부값(자막 크기·위치·색, 썸네일 문구 등)은 지시대로 바꿀 수 있다",
+  "common": {
+    "thumbnail": {
+      "what": "썸네일 후보 3장, 영상과 별개 파일 — config/thumb.json 공통 스펙 (레퍼런스 ENTP가 INFP를 좋아하는 이유: 젠세리프 크게·왼쪽 정렬·얼굴 바로 아래·펄 그라데이션·입체·왼쪽 아래에서 오른쪽 위로 올라가는 굴곡)",
+      "brief": { "output": { "thumbnails": 3 } }
+    },
+    "hook": {
+      "what": "말한 문장 중 훅 후보 3개 → 사용자 선택 → 그 구간을 맨 앞에 두고, 썸네일과 같은 젠세리프 파스텔 글씨로 한 글자씩 타이핑 + 글자마다 키보드 타닥 (위쪽 훅 문구 없음)",
+      "brief": { "hook": { "mode": "typing" }, "sfx": { "hook_typing": true } }
+    },
+    "cut": {
+      "what": "다시 말한 곳·더듬은 곳·같은 말 반복·긴 쉼 전부 빼기 (1초 넘게 늘어진 단어는 재전사로 확인)",
+      "brief": { "cut": { "remove": ["retakes", "stutters", "repeats", "long_pauses"] } }
+    },
+    "subtitles": {
+      "what": "메모먼트 꾹꾹체, 흰 글자+얇은 검은 외곽선, 74.5% 높이 가운데 한 줄, 문장 자리 먼저 잡고 단어가 제자리에 나타남, 마침표 없음, 들은 대로(맞춤법만)",
+      "brief": { "subtitles": { "mode": "gratitude", "period": false } }
+    }
+  },
+  "_locked": "공통 스펙에서 지시서가 바꿀 수 없는 칸 (common_off 없이 다르게 적으면 공통 값으로 되돌림)",
+  "locked": {
+    "thumbnail": [["output", "thumbnails"]],
+    "hook": [["hook", "mode"], ["sfx", "hook_typing"]],
+    "cut": [["cut", "remove"]],
+    "subtitles": [["subtitles", "mode"], ["subtitles", "period"]]
+  },
+
+  "_defaults": "공통 스펙 밖에서 지시에 없을 때 쓰는 값. 감독관은 지시서 확인 때 '지시에 없어 기본값으로 하는 것'을 따로 보여 준다",
+  "defaults": {
+    "output": { "thumbnails": 3 },
+    "cut": {
+      "remove": ["retakes", "stutters", "repeats", "long_pauses"],
+      "trim": [],
+      "_trim": "원본 기준 잘라낼 구간 [[시작초, 끝초], …]",
+      "keep": [],
+      "_keep": "원본 기준 이 구간만 남김 (비우면 전체)",
+      "speed": 1.0,
+      "target_seconds": null
+    },
+    "hook": { "mode": "typing", "text": null, "until": null },
+    "subtitles": {
+      "_detail": "공통 자막 모습 위에 덮어쓸 수 있는 세부값: size · centerY · color · outline · outlineColor · shadow · maxWidth · holdAfter",
+      "mode": "gratitude",
+      "period": false
+    },
+    "broll": {
+      "_look": "card 80% 카드 + 가로 사진은 머리 위 작게(감사일기) · full 화면 전체 · plugin 플러그인 export 그대로",
+      "look": "card",
+      "zoom": 1.05,
+      "transition": "cut",
+      "blur_faces": true
+    },
+    "camera": { "drift": false, "virtual_camera": false },
+    "look": {
+      "_correct": "색 보정 ffmpeg 필터 (cut.json look.correct 로 들어감). null = 보정 없음",
+      "correct": null
+    },
+    "sfx": {
+      "hook_typing": true,
+      "_on_words": "[{words:[말…], file, at: start|end, below_db: 목소리보다 몇 dB 낮게}] — 그 말을 할 때마다 소리",
+      "on_words": [],
+      "_extra": "[{file, at: 출력 초, what}] — 정해진 자리에 소리",
+      "extra": []
+    },
+    "music": { "file": null, "_file": "assets/music/ 안의 파일. 없으면 BGM 없음" },
+    "scenes": [],
+    "_scenes": "IT Reelsmaker 디자인 장면(quote·number·list·cta 등) — visual_plan 단계에서 넣는다",
+    "end_card": null,
+    "_end_card": "null = 플러그인 설정 그대로 · false = 빼기 · {line1, line2, seconds}",
+    "deliver": { "icloud_dir": "크리에이터/자유편집/결과물" }
+  },
+
+  "_presets": "공통 스펙 말고 감사일기 툴킷에서 더 빌려 올 수 있는 부품. 사용자가 '사진은 감사일기처럼', '뽁 소리' 처럼 말하면 brief.json presets 에 이름을 적는다. brief 의 다른 칸이 부품보다 우선",
+  "presets": {
+    "B-roll 카드": {
+      "what": "세로 사진은 화면 80% 카드, 가로 사진은 머리 위 폭 80%, 하드컷, 1.05배까지 부드럽게 확대",
+      "brief": { "broll": { "look": "card", "zoom": 1.05, "transition": "cut" } }
+    },
+    "얼굴 밝기 보정": {
+      "what": "어두운 곳 위주로 살짝 밝게 (감사일기 10.7·10.8)",
+      "brief": { "look": { "correct": "curves=all='0/0 0.25/0.31 0.5/0.58 0.75/0.81 1/1',eq=saturation=1.04" } }
+    },
+    "감사합니다 뽁": {
+      "what": "'감사합니다' 말 시작마다 뽁 (목소리보다 6dB 아래) — words·file 을 바꿔 다른 말·다른 소리로도",
+      "brief": { "sfx": { "on_words": [ { "words": ["감사합니다", "감사했습니다"], "file": "assets/sfx/pop.wav", "at": "start", "below_db": 6 } ] } }
+    }
+  }
+}

@@ -13,7 +13,10 @@ spec.json 예시 (썸네일 담당이 작성):
       {"src": "edit/<id>/final.mp4", "t": 31.0, "title": "..."}
     ]}
     · align: left(기본) | center — 줄마다 가운데 정렬 (styles/<스타일>/thumb.json 의 thumb_align 으로 기본값 변경 가능)
-    · title 의 \\n 은 줄바꿈, {중괄호} 는 강조색.  pos: upper | lower
+    · edit/<id>/thumb.json 이 있으면 그 칸이 스타일 thumb.json 보다 우선 (영상 한 편만 다른 모습)
+    · title 의 \\n 은 줄바꿈, {중괄호} 는 강조색.  pos: upper | lower | middle | below_face(얼굴 바로 아래) (기본값은 thumb.json thumb_pos)
+    · thumb.json 으로 바꿀 수 있는 것: thumb_size · thumb_margin · thumb_line_height · thumb_pos/thumb_mid_y/thumb_face_gap/thumb_bottom_limit/thumb_min_scale · thumb_autofit(긴 줄 자동 축소)
+      · thumb_gradient_mode(horizontal | diagonal) + thumb_gradient_diag{period, angle} · thumb_wave · thumb_tilt · thumb_bevel · thumb_shadow
     · src 가 영상이면 t(초) 필수, 사진이면 생략
 
 안전 영역: 프로필 그리드는 가운데 1080×1440(3:4)만 보이고, 위 0~220·아래 1500~ 는 앱 UI.
@@ -55,9 +58,13 @@ def style_of(edit: Path | None = None) -> str:
 
 
 def load_style(style: str = "gratitude") -> dict:
-    """썸네일 문구 모습: styles/<스타일>/thumb.json."""
+    """썸네일 문구 모습: styles/<스타일>/thumb.json. {"extends": "common"} 이면 공통 스펙 config/thumb.json 위에 덮어쓴다."""
     p = ROOT / "styles" / style / "thumb.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    own = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"extends": "common"}
+    base = {}
+    if own.get("extends") == "common" and (ROOT / "config" / "thumb.json").exists():
+        base = json.loads((ROOT / "config" / "thumb.json").read_text(encoding="utf-8"))
+    return {**base, **{k: v for k, v in own.items() if k != "extends"}}
 
 
 def find_font(style: dict) -> Path:
@@ -114,12 +121,48 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     accent = tuple(style.get("thumb_accent", [255, 214, 120]))
     size = item.get("size", style.get("thumb_size", 112))
     lines = item["title"].replace("\\n", "\n").split("\n")
+    margin = int(style.get("thumb_margin", 90))
     font = ImageFont.truetype(str(font_path), size)
+    if style.get("thumb_autofit", True):
+        # 가장 긴 줄이 화면 폭(양옆 margin)을 넘으면 글자 크기를 줄여 맞춘다
+        probe = ImageDraw.Draw(Image.new("L", (8, 8)))
+        widest = max(sum(probe.textlength(t, font=font) for t, _ in parse_runs(ln)) for ln in lines)
+        if widest > W - 2 * margin:
+            size = int(size * (W - 2 * margin) / widest)
+            font = ImageFont.truetype(str(font_path), size)
+            print(f"  · 후보 {idx}: 가장 긴 줄에 맞춰 글자 크기 {size}px")
+    lh = float(style.get("thumb_line_height", 1.22))
+    block = lambda sz: int(sz * lh) * len(lines) + (int(sz * 0.75) if item.get("sub") else 0)
+    pos = item.get("pos", style.get("thumb_pos", "upper"))
+    bottom = int(style.get("thumb_bottom_limit", SAFE_B))
+    y0 = None
+    if pos == "below_face":
+        # 얼굴 바로 아래 (레퍼런스 2026-10-11: 턱 아래 약 2.5% 띄우고 왼쪽 정렬 덩어리). 자리가 모자라면 글자를 조금 줄이고,
+        # 그래도 안 되면 아래 한계에 붙이고 경고 — 얼굴이 위쪽에 있는 장면을 고르는 게 좋다
+        chin = face_bottom(img)
+        if chin is None:
+            print(f"  ! 후보 {idx}: 얼굴을 못 찾아 화면 {style.get('thumb_mid_y', 0.5):.0%} 높이에 둠")
+            pos = "middle"
+        else:
+            y0 = int(chin + H * float(style.get("thumb_face_gap", 0.025)))
+            min_size = int(size * float(style.get("thumb_min_scale", 0.8)))
+            while y0 + block(size) > bottom and size > min_size:
+                size -= 2
+            if y0 + block(size) > bottom:
+                y0 = bottom - block(size)
+                print(f"  ! 후보 {idx}: 얼굴 아래 자리가 모자라 글자가 얼굴(턱 y {chin})에 걸려요 — 얼굴이 더 위에 있는 장면을 권장")
+            font = ImageFont.truetype(str(font_path), size)
     sub_font = ImageFont.truetype(str(font_path), int(size * 0.42))
-    line_h = int(size * 1.22)
-    block_h = line_h * len(lines) + (int(size * 0.75) if item.get("sub") else 0)
-    upper = item.get("pos", "upper") == "upper"
-    y0 = SAFE_T + 20 if upper else SAFE_B - block_h
+    line_h = int(size * lh)
+    block_h = block(size)
+    upper = pos == "upper"
+    if y0 is not None:
+        pass
+    elif pos == "middle":  # 글자 덩어리 가운데를 화면 높이의 thumb_mid_y 에
+        y0 = int(H * float(item.get("mid_y", style.get("thumb_mid_y", 0.5))) - block_h / 2)
+        y0 = max(SAFE_T, min(y0, bottom - block_h))
+    else:
+        y0 = SAFE_T + 20 if upper else SAFE_B - block_h
 
     # 글자 뒤 부드러운 그라데이션 (테두리·그림자 대신)
     shade = Image.new("L", (W, H), 0)
@@ -155,7 +198,6 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     plain = Image.new("L", (W, H), 0)
     emph_m = Image.new("L", (W, H), 0)
     dp, de = ImageDraw.Draw(plain), ImageDraw.Draw(emph_m)
-    margin = 90
     y = y0
     x_max = margin
     if item.get("sub") and upper:
@@ -181,6 +223,33 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     img = img.convert("RGBA")
     img.alpha_composite(text_layer(plain, emph_m, (min(margin, x_min) if not center else x_min, x_max), (y0, y0 + block_h), color, accent, style))
     img.convert("RGB").save(out, quality=94)
+
+
+def face_bottom(img) -> int | None:
+    """가장 큰 얼굴의 아래쪽(턱) y — tools/faceblur.py 의 검출기(YuNet, 없으면 OpenCV 기본)를 빌려 쓴다."""
+    try:
+        import numpy as np
+        bgr = np.asarray(img.convert("RGB"))[:, :, ::-1].copy()
+        model = ROOT / "assets" / "models" / "face_detection_yunet_2023mar.onnx"
+        import cv2
+        if model.exists() and hasattr(cv2, "FaceDetectorYN"):
+            # 모델 파일을 직접 쓴다 (faceblur.Detector 는 처음 실행 때 it-reelsmaker.json 에 경로를 적어서 피함)
+            k = 640 / bgr.shape[1]
+            small = cv2.resize(bgr, (640, int(bgr.shape[0] * k)))
+            det = cv2.FaceDetectorYN.create(str(model), "", (small.shape[1], small.shape[0]), 0.6, 0.3, 50)
+            _, faces = det.detect(small)
+            boxes = [[int(v / k) for v in f[:4]] for f in (faces if faces is not None else [])]
+        else:
+            sys.path.insert(0, str(ROOT / "tools"))
+            from faceblur import Detector  # type: ignore
+            boxes = Detector().detect(bgr)
+    except Exception as e:  # noqa: BLE001 — 검출이 안 되면 위치만 기본값으로
+        print(f"  ! 얼굴 검출 실패: {e}")
+        return None
+    if not boxes:
+        return None
+    x, y, w, h = max(boxes, key=lambda b: b[2] * b[3])
+    return int(y + h)
 
 
 def _hex(c) -> tuple:
@@ -232,7 +301,22 @@ def text_layer(plain, emph, xr: tuple, yr: tuple, color, accent, style: dict):
     from PIL import Image, ImageChops, ImageFilter
     stops = [_hex(c) for c in style.get("thumb_gradient", [])]
     fill = Image.new("RGB", (W, H), color)
-    if len(stops) >= 2:
+    if len(stops) >= 2 and style.get("thumb_gradient_mode") == "diagonal":
+        # 무지갯빛(펄) 느낌: 색 띠가 비스듬히 짧은 간격으로 되풀이 → 글자마다 위아래·좌우로 색이 바뀜 (레퍼런스 2026-10-11)
+        import math
+        import numpy as np
+        g = style.get("thumb_gradient_diag", {})
+        period = float(g.get("period", 160))
+        ang = math.radians(float(g.get("angle", 35)))
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        t = ((xx * math.cos(ang) + yy * math.sin(ang)) / period) % 1.0
+        loop = np.array(stops + [stops[0]], dtype=np.float32)       # 끝 색이 첫 색으로 이어져 띠 경계가 없게
+        u = t * (len(loop) - 1)
+        k = np.minimum(u.astype(int), len(loop) - 2)
+        f = (u - k)[..., None]
+        f = f * f * (3 - 2 * f)                                     # 색과 색 사이를 부드럽게
+        fill = Image.fromarray((loop[k] * (1 - f) + loop[k + 1] * f).round().astype(np.uint8), "RGB")
+    elif len(stops) >= 2:
         x0, x1 = xr
         span = max(1, x1 - x0)
         row = Image.new("RGB", (W, 1))
@@ -302,6 +386,9 @@ def main() -> None:
     if len(items) != 3:
         print(f"  ! 후보가 {len(items)}개예요 (3개 권장)")
     style = load_style(spec.get("style") or style_of(edit))
+    if (edit / "thumb.json").exists():  # 영상마다 바꾼 칸 (자유형식 등) — 스타일 thumb.json 위에 덮어씀
+        style.update({k: v for k, v in json.loads((edit / "thumb.json").read_text(encoding="utf-8")).items()
+                      if not k.startswith("_")})
     font = find_font(style)
     print(f"폰트: {font.name}")
     outs = []

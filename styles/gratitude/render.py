@@ -499,8 +499,9 @@ def cmd_props(a) -> None:
     props["hook"] = None  # (pop 하면 템플릿 기본 문구가 나온다) 위쪽 훅 문구 대신 훅 자막(gratitudeHook) — 사용자 결정 2026-10-09
     hook_end = hook_until(Path(a.edit)) if a.edit else None
     if hook_end and c.get("hook"):
-        style_json = STYLE / "thumb.json"
-        grad = json.loads(style_json.read_text(encoding="utf-8")).get("thumb_gradient") if style_json.exists() else None
+        sys.path.insert(0, str(ROOT / "tools"))
+        from thumbs import load_style  # 썸네일 공통 스펙(config/thumb.json)까지 따라감
+        grad = load_style(STYLE.name).get("thumb_gradient")
         props["gratitudeHook"] = {**c["hook"], "until": round(hook_end, 3), **({"gradient": grad} if grad else {})}
         # 훅 문구와 겹치지 않게 숨겨 두던 창은 이제 필요 없다 (훅 자막이 그 자리)
         props["hideSubtitles"] = [h for h in props.get("hideSubtitles") or [] if not (h[0] <= 0.05 and h[1] <= hook_end + 0.5)]

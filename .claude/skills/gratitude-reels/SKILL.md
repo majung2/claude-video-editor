@@ -42,7 +42,7 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
      `python3 tools/fonts.py heading majunge` → 화면 훅 문구 = 젠세리프 (`assets/fonts/` 의 ZEN-SERIF 파일)
      `python3 tools/fonts.py subtitle majunge` → 자막 = 메모먼트 꾹꾹체 (`assets/fonts/subtitle/`)
      폰트 파일이 없으면 사용자에게 알리고(아이클라우드 `크리에이터` 폴더에 있음) 넣어 달라고 한 뒤 진행.
-   - 썸네일 폰트: `styles/gratitude/thumb.json` 의 `thumb_font` 또는 `assets/fonts/` 에 젠세리프 폰트가 있는지. 없으면 사용자에게 파일을 넣어 달라고 하고, 그동안은 시스템 명조체로 진행한다고 말한다.
+   - 썸네일 폰트: 공통 썸네일 스펙 `config/thumb.json` 의 `thumb_font` 또는 `assets/fonts/` 에 젠세리프 폰트가 있는지. 없으면 사용자에게 파일을 넣어 달라고 하고, 그동안은 시스템 명조체로 진행한다고 말한다.
    - 효과음: `assets/sfx/` 가 비면 `python3 tools/sfx.py`
    - **감사일기 렌더 모드**: `python3 styles/gratitude/render.py check` — 실패하면 `python3 styles/gratitude/render.py patch-kit`.
      (Remotion 프로젝트 `reels/` 를 `kit.py new` 로 처음 만든 뒤, 그리고 `kit.py update` 뒤에는 항상 다시 실행. `reels/` 는 git 에 없다)

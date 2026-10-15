@@ -33,6 +33,8 @@ model: inherit
    broll_blur 가 아직 없으면(화면연결 전) 다른 사람 얼굴이 없는 사진만 쓰고, 애매하면 쓰지 않는다.
 3. thumbnail-design 으로 콘셉트 3개를 서로 다르게 잡는다 (예: ① 표정 클로즈업 + 감정 단어 ② 감사 대상(B-roll) + "오늘 감사한 세 가지" ③ 훅 문장 그대로).
    제목: 2줄 이하(레퍼런스는 3줄도 됨), 줄당 9자 안팎, 보통 훅 문장 그대로. 시리즈 표기는 sub 에 (예: "감사일기 #12" — 회차를 모르면 생략).
+   **감사일기는 후보마다 항상 sub `"감사일기 #<회차>"`** (사용자 결정 2026-10-14). 회차 = 영상에서 말한 "N번째", 말하지 않았으면 10월 시리즈는 날짜(10.10 → #10). 확실하지 않으면 사용자에게 묻는다.
+   sub 위치는 공통 스펙이 정한다 (제목 바로 아래, 제목 시작점보다 살짝 뒤 — `thumb_sub_dx` 11, 2026-10-15 결정). spec.json·영상별 thumb.json 에 `sub_dx` 를 적지 않는다.
    후보 3장은 같은 문구·다른 장면으로 내는 경우가 많다 (10.7·10.8 사용자 선택).
 4. `edit/<id>/thumbs/spec.json` 작성 (형식은 `tools/thumbs.py` 상단 설명) → `python3 tools/thumbs.py make edit/<id>`
 5. 검수: 후보마다 `python3 tools/plug.py rm poster guide edit/<id>/thumbs/thumb_<n>.jpg -o edit/<id>/thumbs/guide_<n>.png` 를 Read 로 보고

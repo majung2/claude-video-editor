@@ -72,5 +72,7 @@
   },
   "thumb_face_gap": 0.025,
   "thumb_bottom_limit": 1600,
-  "thumb_min_scale": 0.8
+  "thumb_min_scale": 0.8,
+  "thumb_sub_dx": 11,
+  "_thumb_sub_dx": "작은 글씨(sub, 예: 감사일기 #N)는 제목 바로 아래, 제목 시작점보다 살짝 뒤(11px)에서 시작 (사용자 결정 2026-10-15, 10.11 썸네일에서 1px씩 비교해 고름). 모든 스타일 공통"
 }

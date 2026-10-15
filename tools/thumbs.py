@@ -201,7 +201,8 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     y = y0
     x_max = margin
     if item.get("sub") and upper:
-        de.text((margin, y), item["sub"], font=sub_font, fill=255)
+        sx = margin + font.getbbox(lines[0].replace("{", "").replace("}", ""))[0] - sub_font.getbbox(item["sub"])[0]
+        de.text((sx, y), item["sub"], font=sub_font, fill=255)
         y += int(size * 0.75)
     center = item.get("align", style.get("thumb_align", "left")) == "center"
     x_min = W
@@ -219,7 +220,10 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
         x_max = max(x_max, x)
         y += line_h
     if item.get("sub") and not upper:
-        de.text((margin, y + 10), item["sub"], font=sub_font, fill=255)
+        # 작은 글씨의 실제 왼쪽 끝을 위 제목 마지막 줄 글자의 실제 왼쪽 끝에 맞춘다 (글꼴 크기마다 왼쪽 여백이 달라서)
+        sx = x_min + font.getbbox(lines[-1].replace("{", "").replace("}", ""))[0] - sub_font.getbbox(item["sub"])[0]
+        sx += float(item.get("sub_dx", style.get("thumb_sub_dx", 0)))  # 작은 글씨를 제목 시작점보다 살짝 뒤로 (px)
+        de.text((sx, y + 10), item["sub"], font=sub_font, fill=255)
     img = img.convert("RGBA")
     img.alpha_composite(text_layer(plain, emph_m, (min(margin, x_min) if not center else x_min, x_max), (y0, y0 + block_h), color, accent, style))
     img.convert("RGB").save(out, quality=94)

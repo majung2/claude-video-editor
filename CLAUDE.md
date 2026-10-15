@@ -48,6 +48,7 @@
 ```
 styles/<스타일>/             스타일 전용: README.md(결정) · config.json · thumb.json · render.py · references/
 config/thumb.json            썸네일 문구 공통 스펙 (모든 스타일)
+config/audio.json            오디오 공통 스펙 (모든 스타일) — −14 LUFS·−1dBTP, BGM 목소리 −20~−25dB
 footage/<id>/main.*          메인 영상 (원본 복사본)
 footage/<id>/broll/          B-roll 원본      → broll_blur/ 얼굴 블러본
 edit/<id>/                   IT Reelsmaker 작업 폴더 + pipeline.json(스타일·진행 상태)
@@ -85,15 +86,19 @@ Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 
   기기 연결 VM 에서 `pip install faster-whisper` 후 `~/.cache/huggingface` 의 medium 모델로 실행(VM 은 HF 다운로드 불가, Mac 캐시는 읽힘).
   결과는 `edit/<id>/snip/` 에 두고, 맞는 구간의 단어를 `transcripts/main.json` 에 덮어쓴다(원본은 `main.before-splice.json`). 끊는 자리는 `speech_mask.py` 로.
 - **얼굴 블러 모델:** 클라우드에서 GitHub raw 가 막히면 기기 연결 VM 에서 받아 `assets/models/` 에 둔다.
-- **전달:** 기기로 보내는 파일은 30MB 한도 → 마스터를 `libx264 -b:v 3600k -maxrate 4500k`, 소리는 `-c:a copy` 로 다시 압축하고
-  `master_audio --check` 로 다시 확인. 영상은 SendUserFile 로 보낸 뒤 그 fileUuid 로 기기에 쓴다. 인스타가 어차피 다시 압축하므로 화질 문제 없음.
+- **전달:** 기기로 보내는 파일은 30MB 한도 → 마스터를 `libx264 -b:v 3600k -maxrate 4500k` 로 다시 압축하면서 **소리를 2dB 낮춘다** (`-af volume=-2dB -c:a aac -b:a 192k` → 약 −16 LUFS, 사용자 결정 2026-10-14 · `config/audio.json` delivery).
+  `master_audio --check` 는 마스터(−14)에서 통과를 확인하고, 전달본은 ebur128 로 −16 ±0.7 인지 확인. 영상은 SendUserFile 로 보낸 뒤 그 fileUuid 로 기기에 쓴다. 인스타가 어차피 다시 압축하므로 화질 문제 없음.
 - **git:** 기기 연결 셸은 기본적으로 삭제가 막혀 git 잠금 파일이 남는다 → 커밋 전에 툴킷 폴더 삭제 권한을 요청한다. 푸시는 사용자가 Mac 에서.
 - **stage 가 `untrusted_device` 로 거부되면** Mac 의 Claude 데스크톱 앱 로그인이 만료된 것 → 사용자에게 다시 로그인해 달라고 하고 기다린다.
 
 ### 사용자가 정한 것 (모든 스타일)
-- 결과물 = 영상 1개 + 썸네일(후보를 보여 주고 고른 1장). 썸네일은 영상 첫 프레임에 넣지 않는다.
+- 결과물 = 영상 1개 + 썸네일(후보를 보여 주고 고른 1장).
+- **최종 볼륨 −16 LUFS** (2026-10-14, 10.10 에서 −14 는 크다고 함): 마스터 −14 → 전달 압축 때 −2dB. 썸네일은 영상 첫 프레임에 넣지 않는다.
 - **썸네일 문구 모습은 모든 스타일 공통** — `config/thumb.json` (2026-10-11, 레퍼런스 "ENTP가 INFP를 좋아하는 이유"): 왼쪽 정렬, 얼굴 바로 아래, 펄 그라데이션, 입체,
-  굴곡은 왼쪽 아래에서 시작해 오른쪽 위에서 끝남(세기 24). 장면은 원본 전체에서 얼굴이 화면 위쪽인 프레임 우선. 스타일 `thumb.json` 은 `extends: common` + 바꿀 칸만.
+  굴곡은 왼쪽 아래에서 시작해 오른쪽 위에서 끝남(세기 24). 장면은 원본 전체에서 얼굴이 화면 위쪽인 프레임 우선.
+  작은 글씨(sub, 감사일기 #N)는 제목 바로 아래, 제목 시작점보다 살짝 뒤(`thumb_sub_dx` 11, 2026-10-15 — 10.11 에서 결정). 스타일 `thumb.json` 은 `extends: common` + 바꿀 칸만.
+- **오디오 기준은 모든 스타일 공통** — `config/audio.json` (2026-10-13): 마스터 −14 LUFS·true peak −1dBTP(−12 LUFS 보다 크게 금지), 목소리 피크 −6~−3dBFS·평균 −18~−12dBFS,
+  BGM 은 말할 때 목소리보다 20~25dB 아래(기본 `--gap 22`)·핵심 문장 25dB 이상 덕킹, 효과음은 튀지 않게. BGM 이 있으면 폰 스피커로도 확인.
 - 컷: 더듬은 곳·같은 말 반복은 전부 뺀다 — 늘어진 단어는 재전사로 반드시 확인.
 - B-roll: 다른 사람 얼굴은 블러(본인은 남김), 화상 통화 캡처는 이름표·UI 를 잘라낸다.
 - 새 효과음은 미리 듣기용 파일로 먼저 확인받은 뒤 영상에 입힌다.

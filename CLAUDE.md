@@ -55,6 +55,7 @@ edit/<id>/                   IT Reelsmaker 작업 폴더 + pipeline.json(스타�
 reels/                       Remotion 렌더 엔진 (kit.py new 로 생성, 모든 스타일 공용, git 에 없음)
 out/<id>/                    최종 결과물: <id>.mp4 + thumbnail.jpg (후보 thumbnail_1~3.jpg)
 brands/majunge/              브랜드 프로필 (색·폰트·톤) — 사람 단위라 스타일 공용
+brands/majunge/account/      인스타 @majunge.log 계정 분석 스타일 (style-guide.md · style-profile.json, 2026-10-24 승인) — 편집 전 구성안 짤 때 참고
 assets/sfx, assets/music     효과음·배경음 (tools/sfx.py 합성음 + 직접 넣은 것)
 assets/fonts                 젠세리프 · subtitle/ 메모먼트 꾹꾹체
 tools/                       공용 도구: plug · job · faceblur · thumbs · cleanup_src(컨펌 후 원본 삭제) · subs_preview · sfx · fonts · cloud_bundle/setup · vm_transcribe

@@ -65,12 +65,12 @@
       "_extra": "[{file, at: 출력 초, what}] — 정해진 자리에 소리",
       "extra": []
     },
-    "music": { "file": null, "_file": "assets/music/ 안의 파일. 없으면 BGM 없음" },
+    "music": { "file": null, "_file": "assets/music/ 안의 파일. 없으면 BGM 없음", "gap": 22, "_gap": "목소리보다 몇 dB 아래 (20~25, config/audio.json)" },
     "scenes": [],
     "_scenes": "IT Reelsmaker 디자인 장면(quote·number·list·cta 등) — visual_plan 단계에서 넣는다",
     "end_card": null,
     "_end_card": "null = 플러그인 설정 그대로 · false = 빼기 · {line1, line2, seconds}",
-    "deliver": { "icloud_dir": "크리에이터/자유편집/결과물" }
+    "deliver": { "icloud_dir": null, "_icloud_dir": "아이클라우드 업로드 없음 (사용자 결정 2026-10-24) — 결과물은 out/<id>/" }
   },
 
   "_presets": "공통 스펙 말고 감사일기 툴킷에서 더 빌려 올 수 있는 부품. 사용자가 '사진은 감사일기처럼', '뽁 소리' 처럼 말하면 brief.json presets 에 이름을 적는다. brief 의 다른 칸이 부품보다 우선",

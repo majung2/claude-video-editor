@@ -63,10 +63,13 @@ description: 감사일기 릴스 전체 편집을 지휘하는 감독관. 메인
 1. plan 모드 호출 → `edit/<id>/cut_plan.md` 를 Read 해서 요점(시작·끝 구성, 뺀 테이크, 최종 길이)을 사용자에게 보여 주고 **"yes" 를 받는다** (IT Reelsmaker 5단계 규칙: 승인 없이 컷 금지).
 2. 수정 요청이 있으면 그 내용을 담아 plan 모드 재호출.
 3. 승인되면 build 모드 호출. 경계 경고가 남으면 이유를 확인.
+4. **마지막 멘트 뒤 약 1초 여유** (사용자 결정 2026-10-24): 마지막 range 끝을 마지막 말 끝 + 1초 정도로 (바로 뒤에 다른 말이 있으면 말소리 없는 장면 1초를 beat `마무리` range 로). 띡 끝나지 않게.
+5. **훅 확대** (2026-10-23): 확대는 훅에서만, 인트로 첫 문장부터 원래 크기. 확대할 때 YuNet 으로 얼굴을 찾아 얼굴이 화면 가운데 오게 crop 한다 (`styles/gratitude/README.md`).
 
 ## 4. 자막 ∥ 썸네일 — **병렬**
 컷이 끝나면 **한 메시지 안에서 Agent 도구를 두 번** 호출한다: `subtitler`, `thumbnail-maker`.
 - 둘 다 끝날 때까지 기다린 뒤 다음으로.
+- 썸네일 담당에게 회차를 알려 준다 → 후보마다 sub "감사일기 #<회차>" (사용자 결정 2026-10-14).
 - 썸네일 후보 3장(`edit/<id>/thumbs/compare.jpg`)을 Read 로 확인만 한다. 썸네일은 영상과 별개의 결과물이라 하나를 고르게 하지 않는다 — 3장 모두 전달.
 - 자막 담당이 "화면연결 뒤 실행할 명령"(hide-subs 등)을 남겼으면 5단계 뒤에 실행한다.
 
@@ -84,7 +87,8 @@ B-roll 이 없으면 plan 모드가 init 만 하고 끝난다 — 그대로 6단
 IT Reelsmaker 8·9단계를 따른다 (필요하면 Skill 도구로 `it-reelsmaker` 를 불러 8~10단계를 읽는다).
 1. 브랜드 내보내기(처음·브랜드 수정 후): `python3 tools/plug.py rm brand export majunge --remotion reels`
 2. props: `python3 tools/plug.py rm visual_plan export edit/<id> --remotion reels --props edit/<id>/reelkit-props.json [--hook "<hook.json title, 중괄호 제거>"]`
-   이어서 **반드시** 감사일기 모습으로 바꾼다: `python3 styles/gratitude/render.py props edit/<id>/reelkit-props.json --edit edit/<id>`
+   이어서 **반드시** 감사일기 모습으로 바꾼다: `python3 styles/gratitude/render.py props edit/<id>/reelkit-props.json --edit edit/<id> [--dual edit/<id>/dual.json]`
+   (영어 영상은 `--dual` — 두 언어 자막. 훅 글씨 자리는 props 가 얼굴 위치로 자동: 얼굴이 아래쪽이면 머리 위, 위쪽이면 하단 — 2026-10-24. 썸네일 제목도 thumb_pos auto 로 같은 기준)
    (자막 → 가운데·한 줄·외곽선 타자기식, B-roll → 80% 카드·하드컷, 가로 사진 → 작게 위쪽, 줌 없음. export 를 다시 하면 이것도 다시)
 3. 스틸 검수: 훅·각 B-roll 시작/중간·자막 몇 곳 프레임을 뽑아 Read 로 본다 —
    `cd reels && npx remotion still ReelKit --props=<절대경로>/edit/<id>/reelkit-props.json --frame=<N> out/still-<N>.png`
@@ -100,20 +104,24 @@ IT Reelsmaker 8·9단계를 따른다 (필요하면 Skill 도구로 `it-reelsmak
 8. **최종 결과물** — `out/<id>/` 에 정확히 4개만 둔다:
    ```bash
    mkdir -p out/<id>
-   cp edit/<id>/master.mp4            out/<id>/<id>.mp4          # 편집 완료 영상 1개
+   ffmpeg -v error -y -i edit/<id>/master.mp4 -c:v copy -af volume=-2dB -c:a aac -b:a 192k -movflags +faststart out/<id>/<id>.mp4   # 편집 완료 영상 1개 — 전달 볼륨 −16 LUFS (사용자 결정 2026-10-14)
    cp edit/<id>/thumbs/thumb_1.jpg    out/<id>/thumbnail_1.jpg   # 썸네일 후보 3개
    cp edit/<id>/thumbs/thumb_2.jpg    out/<id>/thumbnail_2.jpg
    cp edit/<id>/thumbs/thumb_3.jpg    out/<id>/thumbnail_3.jpg
    ```
    확인: 영상 첫 프레임이 썸네일이 아닌 원래 장면인지 (`ffmpeg -v error -i out/<id>/<id>.mp4 -frames:v 1 edit/<id>/frame0.jpg` → Read).
-9. **아이클라우드로 전달** (사용자 결정): 결과물 폴더 `~/Library/Mobile Documents/com~apple~CloudDocs/크리에이터/감사일기/결과물/<id>/`
+9. **최종 컨펌 → Mac 툴킷 `out/<id>/` 에 저장** (사용자 결정 2026-10-24 — 아이클라우드 업로드 단계는 뺌):
+   완성 영상·썸네일 후보는 **대화에서만** 보여 준다(SendUserFile). 사용자가 고른 썸네일은 `out/<id>/thumbnail.jpg`.
+   사용자가 최종 컨펌하면 `out/<id>/` 의 파일을 SendUserFile 의 fileUuid 로 Mac 툴킷 `out/<id>/` 에 쓴다(device_commit_files, 30MB 한도 → 전달본은 3300~3600k).
+   아이클라우드(결과물 폴더 포함)에는 아무것도 올리지 않는다. 중간 결과물(스틸·`sheet.png`·`compare.jpg`·미리보기 영상)도 대화에서만.
+
+10. **원본 삭제** (사용자 결정 2026-10-22): 최종 컨펌하고 9번 저장이 끝나면 그 영상에 쓴 원본을 아이클라우드 촬영본 폴더에서 지운다.
    ```bash
-   R="$HOME/Library/Mobile Documents/com~apple~CloudDocs/크리에이터/감사일기/결과물/<id>"
-   mkdir -p "$R" && cp out/<id>/* "$R"/
+   python3 tools/cleanup_src.py <id> --src "<아이클라우드>/크리에이터/<스타일 원본 폴더>/촬영본"         # 목록 확인
+   python3 tools/cleanup_src.py <id> --src "…/촬영본" [--also <툴킷에 사본 없는 원본…>] --yes
    ```
-   단계별 검수 중 사용자에게 보여 준 확인용 이미지(스틸·컨택트시트 `sheet.png`·썸네일 비교 `compare.jpg` 등)는 `"$R/검수/"` 에 둔다.
-   아이클라우드 복사는 `run_in_background` 로 실행한다 — macOS 의 iCloud Drive 접근 허용 창이 떠 있으면 명령이 멈춘다.
-   1분 안에 안 끝나면 "Mac 화면에서 iCloud Drive 접근을 허용해 주세요"라고 알리고, 결과물은 `out/<id>/` 에 그대로 있다고 말한다.
+   툴킷 `footage/<id>/` 에 같은 크기 사본이 있는 파일만 지운다(지워도 원본은 툴킷에 남음). 기기 연결 셸은 삭제가 막혀 있으니 먼저 `크리에이터` 폴더 삭제 권한을 요청한다.
+   다른 날 촬영본은 건드리지 않는다. 지운 목록을 사용자에게 한 줄로 알린다.
 
 ## 보고 (끝날 때)
 측정값으로 말한다: 최종 길이, 남은 무음(ms), 라우드니스·피크, 잘라낸 테이크 수, B-roll 개수와 블러한 얼굴 수, 자막 모드와 덩어리 수, 썸네일 후보 3개의 콘셉트.

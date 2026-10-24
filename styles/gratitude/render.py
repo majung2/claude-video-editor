@@ -61,6 +61,19 @@ export type GratitudeStyle = {
   outlineColor?: string;
   shadow?: number; // px, soft drop shadow under the outline
   holdAfter?: number; // s the line stays after its last word
+  reveal?: "word" | "line"; // "line" (2026-10-23 사용자 결정, 19일차): the whole line appears at once instead of word by word
+  dual?: GratitudeDual | null; // two-language subtitles (2026-10-22, 18일차 English): spoken line above, translation below
+};
+// Two-language subtitles (majunge patch, user decision 2026-10-22): the spoken words (e.g. English) on top in the heading
+// font and a butter-cream color, typed in place as usual; the translation (Korean) under it in the subtitle font, shown
+// whole for the line. `lines` are spans on the output timeline (render.py props --dual): the words spoken in a span make
+// one subtitle and `ko` is its translation. Both lines are smaller than the one-line style.
+export type GratitudeDual = {
+  lines: { start: number; end: number; ko: string }[];
+  enSize?: number; enCenterY?: number; enColor?: string; enOutline?: number; enFont?: "heading" | "body";
+  koSize?: number; koCenterY?: number; koColor?: string; koOutline?: number;
+  hookKoCenterY?: number; // translation under the hook phrase
+  reveal?: "word" | "line"; // "line" (2026-10-22 사용자 결정): the whole spoken line appears at once, no word-by-word typing
 };
 // The hook (majunge patch, user decision 2026-10-09): instead of a headline at the top plus subtitles at the bottom, the
 // hook's spoken words appear phrase by phrase, as they are spoken, in the thumbnail's look — heading font (젠세리프),
@@ -152,7 +165,10 @@ export const GratitudeSubtitles: React.FC<{
       const k = bestSplit(ws);
       return [...fit(ws.slice(0, k)), ...fit(ws.slice(k))];
     };
-    const parts = buildChunks(words, 40, 200).flatMap((c) => fit(c.words));
+    const dual = s.dual;
+    const parts = dual && dual.lines.length
+      ? dual.lines.map((d) => words.filter((w) => w.start >= d.start - 0.05 && w.start < d.end)).filter((ws) => ws.length)
+      : buildChunks(words, 40, 200).flatMap((c) => fit(c.words));
     const out: Line[] = parts.map((ws) => ({
       words: ws, start: ws[0].start, end: ws[ws.length - 1].end + s.holdAfter,
       // a single word wider than the line shrinks instead of running past the edge
@@ -165,7 +181,7 @@ export const GratitudeSubtitles: React.FC<{
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captions, hideKey, font, ready, s.size, s.maxWidth, s.weight, s.outline, s.holdAfter, tail, until]);
+  }, [captions, hideKey, font, ready, s.size, s.maxWidth, s.weight, s.outline, s.holdAfter, tail, until, s.dual]);
   const t = frame / fps;
   if (hook && t < until) {
     // one phrase at a time: it appears with its first word and stays until the next phrase (the last one: to the hook's end)
@@ -181,7 +197,16 @@ export const GratitudeSubtitles: React.FC<{
     const shownW = ready ? measureText({ text: full.slice(0, shown), fontFamily: hf, fontSize: size }).width : 0;
     const stops = (hook.gradient ?? ["#DDF0D2", "#FFF6E6", "#F6D3E3", "#E8DAF2", "#FFF6E6", "#DDF0D2"]).join(", ");
     const sh = { alpha: 0.4, blur: 6, dx: 3, dy: 4, ...(hook.shadow ?? {}) };
+    const hookKo = s.dual ? s.dual.lines.find((d) => d.start < until && t >= d.start - 0.05 && t < Math.max(d.end, until)) : null;
+    const koS = s.dual?.koSize ?? 58;
     return (
+      <>
+      {hookKo && hookKo.ko ? (
+        <div style={{ position: "absolute", left: 0, width: 1080, top: (s.dual?.hookKoCenterY ?? cy + size * 0.95) - (koS * 1.25) / 2,
+          textAlign: "center", fontFamily: font, fontWeight: s.weight, lineHeight: 1.25, whiteSpace: "pre", color: s.dual?.koColor ?? s.color,
+          fontSize: Math.min(koS, fitSize({ text: hookKo.ko, size: koS, font, weight: s.weight, maxWidth: s.maxWidth, ready })),
+          textShadow: outlineShadow(s.dual?.koOutline ?? s.outline, s.outlineColor, s.shadow) }}>{hookKo.ko}</div>
+      ) : null}
       <div style={{ position: "absolute", left: 0, width: 1080, top: cy - size * 0.7, height: size * 1.4, display: "flex",
         alignItems: "center", justifyContent: "center" }}>
         {/* the whole phrase is laid out once (centered) and typed out in place, letter by letter: a clip from the right
@@ -194,19 +219,47 @@ export const GratitudeSubtitles: React.FC<{
           {full}
         </span>
       </div>
+      </>
     );
   }
   if (hide.some(([a, b]) => t >= a && t < b)) return null;
   const l = lines.find((x) => t >= x.start - 0.03 && t < x.end);
   if (!l) return null;
   const lh = 1.25;
+  if (s.dual) {
+    const d = s.dual;
+    const enFont = d.enFont === "body" ? font : headFont ?? font;
+    const enS = d.enSize ?? 62, koS = d.koSize ?? 58;
+    const enSize = Math.min(enS, fitSize({ text: text(l.words), size: enS, font: enFont, weight: 400, maxWidth: s.maxWidth, ready }));
+    const ko = d.lines.find((x) => l.start >= x.start - 0.05 && l.start < x.end)?.ko ?? "";
+    const koSize = Math.min(koS, fitSize({ text: ko, size: koS, font, weight: s.weight, maxWidth: s.maxWidth, ready }));
+    return (
+      <>
+        <div style={{ position: "absolute", left: 0, width: 1080, top: (d.enCenterY ?? 1370) - (enSize * lh) / 2, textAlign: "center",
+          fontFamily: enFont, fontSize: enSize, lineHeight: lh, color: d.enColor ?? "#FFF1C1", whiteSpace: "pre",
+          textShadow: outlineShadow(d.enOutline ?? 2.5, s.outlineColor, s.shadow) }}>
+          {l.words.map((w, k) => (
+            <span key={k} style={{ opacity: d.reveal === "line" || w === l.words[0] || t >= w.start - 0.03 ? 1 : 0 }}>
+              {k && !w.glue ? " " : ""}
+              {w.text}
+            </span>
+          ))}
+        </div>
+        {ko ? (
+          <div style={{ position: "absolute", left: 0, width: 1080, top: (d.koCenterY ?? 1450) - (koSize * lh) / 2, textAlign: "center",
+            fontFamily: font, fontWeight: s.weight, fontSize: koSize, lineHeight: lh, color: d.koColor ?? s.color, whiteSpace: "pre",
+            textShadow: outlineShadow(d.koOutline ?? s.outline, s.outlineColor, s.shadow) }}>{ko}</div>
+        ) : null}
+      </>
+    );
+  }
   return (
     <div style={{ position: "absolute", left: 0, width: 1080, top: s.centerY - (l.size * lh) / 2, textAlign: "center",
       fontFamily: font, fontWeight: s.weight, fontSize: l.size, lineHeight: lh, color: s.color, whiteSpace: "pre",
       textShadow: outlineShadow(s.outline, s.outlineColor, s.shadow) }}>
       {l.words.map((w, k) => (
         // words not yet spoken keep their place (the line is laid out once), they are only invisible
-        <span key={k} style={{ opacity: w === l.words[0] || t >= w.start - 0.03 ? 1 : 0 }}>
+        <span key={k} style={{ opacity: s.reveal === "line" || w === l.words[0] || t >= w.start - 0.03 ? 1 : 0 }}>
           {k && !w.glue ? " " : ""}
           {w.text}
         </span>
@@ -493,7 +546,10 @@ def cmd_props(a) -> None:
     p = Path(a.props)
     props = json.loads(p.read_text(encoding="utf-8"))
     props["subtitles"] = "gratitude"
-    props["gratitude"] = c["subtitles"]
+    props["gratitude"] = dict(c["subtitles"])
+    if getattr(a, "dual", None):  # 두 언어 자막 (2026-10-22): edit/<id>/dual.json = {"style": {...}, "lines": [...]}
+        dj = json.loads(Path(a.dual).read_text(encoding="utf-8"))
+        props["gratitude"]["dual"] = {**c.get("dual", {}), **dj.get("style", {}), "lines": dj["lines"]}
     props["drift"] = False  # 레퍼런스: 줌 없음
     props.pop("camera", None)
     props["hook"] = None  # (pop 하면 템플릿 기본 문구가 나온다) 위쪽 훅 문구 대신 훅 자막(gratitudeHook) — 사용자 결정 2026-10-09
@@ -554,6 +610,7 @@ def main() -> None:
     q.add_argument("props")
     q.add_argument("--edit")
     q.add_argument("--remotion")
+    q.add_argument("--dual", help="두 언어 자막: edit/<id>/dual.json (위 = 말한 언어, 아래 = 번역)")
     q = sp.add_parser("keys", help="훅 타이핑·감사합니다 효과음을 sfx.json 에 넣기")
     q.add_argument("--edit", required=True)
     a = ap.parse_args()

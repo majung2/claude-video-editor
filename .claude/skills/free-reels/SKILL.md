@@ -107,7 +107,7 @@ python3 styles/free/render.py keys --edit edit/<id>
 마스터는 `--cover` 없이, −14 LUFS·피크 통과해야 전달.
 
 ## 9. 전달
-`out/<id>/` 에 `<id>.mp4` (+ 썸네일 후보). 아이클라우드 `크리에이터/자유편집/결과물/<id>/` (brief `deliver.icloud_dir`) — 방법은 `/gratitude-reels` 7단계 9번과 같다.
+`out/<id>/` 에 `<id>.mp4` (+ 썸네일 후보) — 방법은 `/gratitude-reels` 7단계 9번과 같다. 중간 결과물은 대화에서만, 최종 컨펌 뒤 Mac 툴킷 `out/<id>/` 에만 저장 (아이클라우드 업로드 없음, 사용자 결정 2026-10-24).
 `edit/<id>/brief.json`·`brief.resolved.json` 도 Mac 툴킷으로 보낸다 (나중에 같은 영상을 고칠 때 지시서가 남아 있게).
 
 ## 피드백 — 지시처럼 받는다
@@ -122,6 +122,14 @@ python3 styles/free/render.py keys --edit edit/<id>
 | 썸네일 | 5 썸네일만 |
 사용자가 "앞으로도", "다음에도" 라고 하면 `styles/free/config.json` defaults(또는 presets 에 새 부품)와 README "사용자가 정한 것"에 적는다.
 같은 지시 묶음을 여러 영상에 반복하게 되면 그 묶음을 새 스타일로 만들자고 한 줄 제안한다 (`styles/README.md`).
+
+10. **원본 삭제** (사용자 결정 2026-10-22): 최종 컨펌하고 9번 저장이 끝나면 그 영상에 쓴 원본을 아이클라우드 촬영본 폴더에서 지운다.
+   ```bash
+   python3 tools/cleanup_src.py <id> --src "<아이클라우드>/크리에이터/<스타일 원본 폴더>/촬영본"         # 목록 확인
+   python3 tools/cleanup_src.py <id> --src "…/촬영본" [--also <툴킷에 사본 없는 원본…>] --yes
+   ```
+   툴킷 `footage/<id>/` 에 같은 크기 사본이 있는 파일만 지운다(지워도 원본은 툴킷에 남음). 기기 연결 셸은 삭제가 막혀 있으니 먼저 `크리에이터` 폴더 삭제 권한을 요청한다.
+   다른 날 촬영본은 건드리지 않는다. 지운 목록을 사용자에게 한 줄로 알린다.
 
 ## 보고 (끝날 때)
 지시 항목별로 "어떻게 반영했는지" 한 줄씩 + 측정값(최종 길이, 라우드니스·피크, 잘라낸 곳 수, B-roll·블러 수). 못 한 지시는 이유와 대안.

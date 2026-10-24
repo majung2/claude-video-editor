@@ -136,6 +136,16 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
     pos = item.get("pos", style.get("thumb_pos", "upper"))
     bottom = int(style.get("thumb_bottom_limit", SAFE_B))
     y0 = None
+    if pos == "auto":
+        # 얼굴 위치로 위/아래 결정 (사용자 결정 2026-10-24): 얼굴 가운데가 화면 가운데보다 아래면 제목은 머리 위(middle, thumb_top_mid_y),
+        # 위면 얼굴 바로 아래(below_face). 얼굴을 못 찾으면 머리 위
+        fc = face_center_y(img)
+        if fc is not None and fc < H * 0.5:
+            pos = "below_face"
+        else:
+            pos = "middle"
+            item = {**item, "mid_y": item.get("mid_y", style.get("thumb_top_mid_y", 0.27))}
+        print(f"  · 후보 {idx}: 얼굴 가운데 y {fc} → 제목 {'얼굴 아래' if pos == 'below_face' else '머리 위'}")
     if pos == "below_face":
         # 얼굴 바로 아래 (레퍼런스 2026-10-11: 턱 아래 약 2.5% 띄우고 왼쪽 정렬 덩어리). 자리가 모자라면 글자를 조금 줄이고,
         # 그래도 안 되면 아래 한계에 붙이고 경고 — 얼굴이 위쪽에 있는 장면을 고르는 게 좋다
@@ -160,7 +170,8 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
         pass
     elif pos == "middle":  # 글자 덩어리 가운데를 화면 높이의 thumb_mid_y 에
         y0 = int(H * float(item.get("mid_y", style.get("thumb_mid_y", 0.5))) - block_h / 2)
-        y0 = max(SAFE_T, min(y0, bottom - block_h))
+        if not item.get("free_y"):  # free_y: 사용자가 위치를 직접 정한 경우 안전 영역(위 300px) 제한 없이 (2026-10-18 13일차)
+            y0 = max(SAFE_T, min(y0, bottom - block_h))
     else:
         y0 = SAFE_T + 20 if upper else SAFE_B - block_h
 
@@ -223,7 +234,7 @@ def render_one(item: dict, font_path: Path, style: dict, out: Path, tmp: Path, i
         # 작은 글씨의 실제 왼쪽 끝을 위 제목 마지막 줄 글자의 실제 왼쪽 끝에 맞춘다 (글꼴 크기마다 왼쪽 여백이 달라서)
         sx = x_min + font.getbbox(lines[-1].replace("{", "").replace("}", ""))[0] - sub_font.getbbox(item["sub"])[0]
         sx += float(item.get("sub_dx", style.get("thumb_sub_dx", 0)))  # 작은 글씨를 제목 시작점보다 살짝 뒤로 (px)
-        de.text((sx, y + 10), item["sub"], font=sub_font, fill=255)
+        de.text((sx, y + 10 + float(item.get("sub_dy", style.get("thumb_sub_dy", 0)))), item["sub"], font=sub_font, fill=255)  # sub_dy: 아래로 더 (px)
     img = img.convert("RGBA")
     img.alpha_composite(text_layer(plain, emph_m, (min(margin, x_min) if not center else x_min, x_max), (y0, y0 + block_h), color, accent, style))
     img.convert("RGB").save(out, quality=94)
@@ -253,7 +264,19 @@ def face_bottom(img) -> int | None:
     if not boxes:
         return None
     x, y, w, h = max(boxes, key=lambda b: b[2] * b[3])
+    _LAST_FACE_H[0] = h
     return int(y + h)
+
+
+def face_center_y(img) -> int | None:
+    """가장 큰 얼굴의 세로 가운데 y (pos auto 용, 2026-10-24). face_bottom 과 같은 검출기."""
+    chin = face_bottom(img)
+    if chin is None:
+        return None
+    return int(chin - _LAST_FACE_H[0] / 2)
+
+
+_LAST_FACE_H = [0]
 
 
 def _hex(c) -> tuple:

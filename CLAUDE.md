@@ -57,7 +57,7 @@ out/<id>/                    최종 결과물: <id>.mp4 + thumbnail.jpg (후보 
 brands/majunge/              브랜드 프로필 (색·폰트·톤) — 사람 단위라 스타일 공용
 assets/sfx, assets/music     효과음·배경음 (tools/sfx.py 합성음 + 직접 넣은 것)
 assets/fonts                 젠세리프 · subtitle/ 메모먼트 꾹꾹체
-tools/                       공용 도구: plug · job · faceblur · thumbs · subs_preview · sfx · fonts · cloud_bundle/setup · vm_transcribe
+tools/                       공용 도구: plug · job · faceblur · thumbs · cleanup_src(컨펌 후 원본 삭제) · subs_preview · sfx · fonts · cloud_bundle/setup · vm_transcribe
 ```
 
 ## 클라우드 세션에서 진행하기 (모든 스타일 공용, 10.6 감사일기로 검증 2026-10-10)
@@ -89,10 +89,21 @@ Mac 툴킷은 기기 연결(remote-devices)로 파일만 다룰 수 있고, Mac 
 - **전달:** 기기로 보내는 파일은 30MB 한도 → 마스터를 `libx264 -b:v 3600k -maxrate 4500k` 로 다시 압축하면서 **소리를 2dB 낮춘다** (`-af volume=-2dB -c:a aac -b:a 192k` → 약 −16 LUFS, 사용자 결정 2026-10-14 · `config/audio.json` delivery).
   `master_audio --check` 는 마스터(−14)에서 통과를 확인하고, 전달본은 ebur128 로 −16 ±0.7 인지 확인. 영상은 SendUserFile 로 보낸 뒤 그 fileUuid 로 기기에 쓴다. 인스타가 어차피 다시 압축하므로 화질 문제 없음.
 - **git:** 기기 연결 셸은 기본적으로 삭제가 막혀 git 잠금 파일이 남는다 → 커밋 전에 툴킷 폴더 삭제 권한을 요청한다. 푸시는 사용자가 Mac 에서.
-- **stage 가 `untrusted_device` 로 거부되면** Mac 의 Claude 데스크톱 앱 로그인이 만료된 것 → 사용자에게 다시 로그인해 달라고 하고 기다린다.
+- **stage 가 `untrusted_device`·`session_stale_relogin` 으로 거부되면** Mac 의 Claude 데스크톱 앱 로그인이 만료된 것 → 사용자에게 다시 로그인해 달라고 하고 기다린다.
+- **한 편을 여러 파일로 찍었으면** (18·19일차, 2026-10-22): Mac 셸에서 `ffmpeg -f concat -safe 0 -i list.txt -c copy footage/<id>/main.MOV` 로 하나로 합쳐 등록·전사한다.
+- **원본이 아이클라우드에만 있으면** (`device_list_dir` 의 `cloudOnly`): VM 에서 읽으면 'Resource deadlock avoided', stage 도 거부 → 사용자에게 Finder 에서 그 파일들 오른쪽 클릭 → '지금 다운로드' 를 부탁한다.
+- **메인이 커서 stage 한도(400MB)를 넘으면** (18·19일차): 컷 계획을 승인받은 뒤 Mac 셸에서 쓸 구간만 앞뒤 0.2~0.5초 여유를 두고 trim·concat 해 `footage/<id>/main_sel.mp4`(libx264 CRF 17)로 만들어 stage 한다.
+  전사 단어 시간은 그 타임라인으로 옮겨 `transcripts/main_sel.json` 에(cut.json `sources.main`). 나중에 넣을 구간은 `add.mp4` 같은 별도 source 로 뽑아 붙인다.
+- **차 안·바깥 소음이 큰 영상:** RMS·VAD 로는 말 사이 쉼을 못 찾는다 → 구간을 5~8초로 잘라 다시 받아쓴 단어 시간(`snip/`)으로 경계를 정한다.
+- **영어로 찍은 영상:** `tools/vm_transcribe.py <id> --language en` (vm_transcribe.sh 는 한국어 고정이라 py 를 직접 부른다). 자막은 두 언어 — `styles/gratitude/README.md`.
 
 ### 사용자가 정한 것 (모든 스타일)
 - 결과물 = 영상 1개 + 썸네일(후보를 보여 주고 고른 1장).
+- **중간 결과물은 대화에서만** (2026-10-16): 스틸·컨택트시트·썸네일 비교·미리보기 영상 등은 SendUserFile 로 대화에서만 보여 주고 아이클라우드에 올리지 않는다. **아이클라우드 업로드는 하지 않는다** (사용자 결정 2026-10-24): 사용자가 최종 컨펌하면 결과물은 Mac 툴킷 `out/<id>/` 에만 둔다 (SendUserFile → 그 fileUuid 로 device_commit_files).
+- **최종 컨펌 → 원본 삭제** (2026-10-22, 업로드 단계는 2026-10-24 에 뺌): 최종 컨펌하고 결과물을 Mac 툴킷 `out/<id>/` 에 둔 다음, 그 영상에 쓴 원본을 아이클라우드 촬영본 폴더에서 지운다.
+  `python3 tools/cleanup_src.py <id> --src <촬영본 폴더>` 로 목록을 먼저 보고(툴킷 `footage/<id>/` 에 같은 크기 사본이 있는 파일만 대상) → `--yes`.
+  툴킷에 사본이 없는 원본(나중에 따로 올린 사진 등)은 `--also <파일명…>` 으로 지정하면 `footage/<id>/broll/` 로 복사한 뒤 지운다.
+  기기 연결 셸은 삭제가 막혀 있으니 먼저 원본 폴더(`크리에이터`) 삭제 권한을 요청한다. 이번 영상과 무관한 파일(다음 날 촬영본)은 건드리지 않는다.
 - **최종 볼륨 −16 LUFS** (2026-10-14, 10.10 에서 −14 는 크다고 함): 마스터 −14 → 전달 압축 때 −2dB. 썸네일은 영상 첫 프레임에 넣지 않는다.
 - **썸네일 문구 모습은 모든 스타일 공통** — `config/thumb.json` (2026-10-11, 레퍼런스 "ENTP가 INFP를 좋아하는 이유"): 왼쪽 정렬, 얼굴 바로 아래, 펄 그라데이션, 입체,
   굴곡은 왼쪽 아래에서 시작해 오른쪽 위에서 끝남(세기 24). 장면은 원본 전체에서 얼굴이 화면 위쪽인 프레임 우선.

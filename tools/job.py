@@ -84,6 +84,7 @@ def cmd_new(a) -> None:
     state = {"id": a.id, "style": a.style, "created": datetime.now().isoformat(timespec="seconds"),
              "main": str(dst_main.relative_to(ROOT)), "broll_dir": str((foot / "broll").relative_to(ROOT)),
              "broll_count": n,
+             "sources": [str(Path(a.main).expanduser())] + [str(Path(b).expanduser()) for b in (a.broll or [])],  # 원본 위치 (cleanup_src.py 가 씀)
              "steps": {k: {"owner": o, "status": "pending", "note": ""} for k, o in STEPS}}
     (edit / "pipeline.json").write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"영상 준비 완료: {a.id}  메인 {dst_main.relative_to(ROOT)} / B-roll {n}개")

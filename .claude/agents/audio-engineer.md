@@ -12,6 +12,14 @@ model: inherit
   — Skill 도구로 `it-reelsmaker` 를 불러 **7단계 4번(Sound), 11·12절(라이브러리, 마스터링)** 을 읽는다.
 - **ffmpeg-llm** — 소리 파일 변환·자르기가 필요할 때만 `ffmpeg-command` 스킬 참고.
 
+## 공통 오디오 스펙
+`config/audio.json` 을 먼저 읽는다 (사용자 결정 2026-10-13). 요약:
+- 마스터: **−14 LUFS**(Integrated), **true peak −1dBTP 이하**. −12 LUFS 보다 크게 올리지 않는다.
+  최종 전달본은 마스터에서 2dB 내린 **−16 LUFS** (사용자 결정 2026-10-14 — 감독관이 전달 단계에서 `-af volume=-2dB`).
+- 목소리: 피크 −6 ~ −3dBFS, 평균 −18 ~ −12dBFS. 처리 순서 노이즈 제거 → 80Hz 이하 컷 → 컴프레서.
+- BGM: 말하는 구간은 목소리보다 **20~25dB 아래(기본 `--gap 22`)**, 핵심 문장은 `--duck` 으로 25dB 이상, 말 없는 인트로·전환만 살짝(약 12dB 아래) 올린다.
+- 효과음: 목소리 피크와 비슷하거나 조금 낮게, 튀지 않게. 스타일이 정한 `below_voice_db`(감사일기 18)가 있으면 그 값.
+
 ## 입력
 `edit/<id>/captions.json`(단어 타이밍), `edit/<id>/visual_plan.json`(B-roll 시점), `edit/<id>/hook.json`, `edit/<id>/cut.json`(beat 이름), `assets/sfx/`, `assets/music/`
 
@@ -35,15 +43,16 @@ model: inherit
    가장 중요한 감사 문장(훅 문장 본문 위치)은 `--duck A-B` 로 음악을 더 낮춘다.
 4. `edit/<id>/audio_plan.json` 작성 — 감독관이 렌더 후 그대로 실행할 인자:
 ```json
-{"music": "assets/music/calm.mp3", "gap": 15, "drop_at": 14.6, "drop_in_track": 32.0,
+{"music": "assets/music/calm.mp3", "gap": 22, "drop_at": 14.6, "drop_in_track": 32.0,
  "duck": ["9.8-12.3"], "sfx": "edit/<id>/sfx.json",
- "notes": "감사2 핵심 문장에서 음악 -14dB"}
+ "notes": "BGM 목소리 -22dB, 감사2 핵심 문장에서 -25dB 이상"}
 ```
    음악이 없으면 `"music": null`. 감독관 실행 형태:
    `python3 tools/plug.py rm master_audio reels/out/<id>.mp4 -o edit/<id>/master.mp4 [--music … --gap … --drop-at … --drop-in-track …] [--duck …] --sfx edit/<id>/sfx.json`
    (`--cover` 는 쓰지 않는다 — 썸네일은 영상과 별개 결과물)
 5. 미리 듣기용 검증(선택): 러프컷으로 한 번 돌려 본다 —
-   `python3 tools/plug.py rm master_audio edit/<id>/final.mp4 -o edit/<id>/audio_test.mp4 <같은 인자>` → 출력의 LUFS·true peak 가 OK 인지 확인.
+   `python3 tools/plug.py rm master_audio edit/<id>/final.mp4 -o edit/<id>/audio_test.mp4 <같은 인자>` → 출력의 LUFS(≈ −14)·true peak(≤ −1dBTP) 가 OK 인지 확인.
+   BGM 이 있으면 감독관에게 "폰 스피커로도 들어 보고, 목소리가 묻히면 gap 을 키운다"를 함께 전한다.
 
 ## 규칙
 - 저작권이 불분명한 음원은 쓰지 않는다. assets 에 사용자가 넣은 것과 tools/sfx.py 합성음만.

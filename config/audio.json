@@ -1,0 +1,43 @@
+{
+  "_what": "모든 스타일 공통 오디오 스펙 (사용자 결정 2026-10-13, 토킹헤드 기준). 스타일 README 에 따로 적힌 값이 있으면 그쪽이 우선.",
+  "master": {
+    "integrated_lufs": -14,
+    "true_peak_dbtp": -1,
+    "_master": "최종 마스터 기준. 유튜브·릴스·틱톡 모두 약 −14 LUFS 로 정규화한다. −13 까지는 허용, −12 보다 크게 올리지 않는다(압축감·피로)."
+  },
+  "voice": {
+    "peak_dbfs": [
+      -6,
+      -3
+    ],
+    "average_dbfs": [
+      -18,
+      -12
+    ],
+    "highpass_hz": 80,
+    "_voice": "마스터 전 목소리 트랙 기준. 처리 순서: 노이즈 제거 → EQ(80Hz 이하 컷) → 컴프레서로 크기 고르게. 목소리 자체 컷·속도는 오디오 담당이 건드리지 않는다."
+  },
+  "music": {
+    "below_voice_db": [
+      20,
+      25
+    ],
+    "default_gap_db": 22,
+    "key_line_duck_db": 25,
+    "no_speech_gap_db": 12,
+    "_music": "BGM 은 말하는 구간에서 목소리보다 20~25dB 아래(기본 22 → master_audio --gap 22). 핵심 문장은 --duck 으로 25dB 이상 낮춘다. 말 없는 인트로·전환에서만 살짝 올린다(약 12dB 아래). 사이드체인 덕킹 사용."
+  },
+  "sfx": {
+    "max_level": "목소리 피크와 비슷하거나 조금 낮게 — 순간적으로 튀지 않게",
+    "_sfx": "피크 −1dBTP 를 넘지 않는 범위에서. 스타일별 below_voice_db 값(감사일기 18, 뽁 6)은 사용자가 정한 값이라 그대로 둔다."
+  },
+  "check": [
+    "master_audio 출력의 LUFS ≈ −14, true peak ≤ −1dBTP → 전달본은 −2dB 내려 ≈ −16 LUFS (delivery)",
+    "이어폰과 폰 스피커 둘 다로 듣기 — 스피커에서 목소리가 BGM 에 묻히면 BGM 을 더 내린다(gap 을 키운다)"
+  ],
+  "delivery": {
+    "integrated_lufs": -16,
+    "gain_after_master_db": -2,
+    "_delivery": "사용자 결정 2026-10-14 (10.10 감사일기): 최종 전달본은 −16 LUFS. master_audio 는 −14 로만 맞추므로(플러그인 고정), 검사 통과한 마스터에 전달 압축 때 소리를 2dB 낮춘다: ffmpeg -i master.mp4 -c:v libx264 -b:v 3600k -maxrate 4500k -bufsize 9000k -pix_fmt yuv420p -af volume=-2dB -c:a aac -b:a 192k -movflags +faststart out/<id>/<id>.mp4 → 결과 ≈ −16 LUFS, 피크 ≈ −3dB."
+  }
+}

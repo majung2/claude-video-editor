@@ -8,12 +8,19 @@
     "maxWidth": 842,
     "weight": 700,
     "color": "#FFFFFF",
-    "outline": 3,
+    "outline": 0,
     "outlineColor": "#000000",
     "shadow": 2,
     "holdAfter": 0.25,
     "reveal": "line",
-    "_reveal": "line = 한 줄이 통째로 나옴 (2026-10-23 사용자 결정), word = 예전 제자리 타자기"
+    "_reveal": "line = 한 줄이 통째로 나옴 (2026-10-23 사용자 결정), word = 예전 제자리 타자기",
+    "_style": "2026-10-24 사용자 결정: 말자막은 흰 글자 + 진한 그림자(softShadow alpha 0.75), 검은 외곽선 없음. 훅만 #FCEED1 + 연한 그림자",
+    "softShadow": {
+      "alpha": 0.75,
+      "blur": 6,
+      "dx": 2,
+      "dy": 3
+    }
   },
   "_card": "B-roll 카드 상자 x, y, w, h (화면 80% x 80%, 가운데). 사진·영상은 잘리지 않게 이 안에 맞춘다",
   "card": [
@@ -39,17 +46,19 @@
     "maxChars": 9,
     "gap": 0.25,
     "shadow": {
-      "alpha": 0.45,
-      "blur": 6,
-      "dx": 3,
-      "dy": 4
+      "alpha": 0.35,
+      "blur": 8,
+      "dx": 2,
+      "dy": 3
     },
     "charStep": 0.11,
     "_charStep": "한 글자씩 나오는 간격 최대값(초). 단어가 말해지는 동안 글자를 고르게 나눠 친다",
     "autoPos": true,
     "topMin": 330,
     "headGap": 20,
-    "_autoPos": "훅 글씨 자리 자동 (사용자 결정 2026-10-24): 촬영 원본 얼굴 가운데가 화면 가운데보다 아래면 머리 위(얼굴 위쪽 − 글자 − headGap, 최소 topMin), 위면 하단 centerY(1430). render.py props 가 final.mp4 훅 구간에서 얼굴을 찾음"
+    "_autoPos": "훅 글씨 자리 자동 (사용자 결정 2026-10-24): 촬영 원본 얼굴 가운데가 화면 가운데보다 아래면 머리 위(얼굴 위쪽 − 글자 − headGap, 최소 topMin), 위면 하단 centerY(1430). render.py props 가 final.mp4 훅 구간에서 얼굴을 찾음",
+    "color": "#FCEED1",
+    "_color": "2026-10-24 사용자 결정: 훅 글씨는 그라데이션 대신 #FCEED1 한 색 + 연한 그림자"
   },
   "_sounds": "효과음 (styles/gratitude/render.py keys): key = 훅 자막 한 글자마다 키보드 소리(4가지 돌아가며), click = click_words 를 말할 때마다 넣는 소리 (2026-10-10 사용자 결정: 뽁 pop.wav, 말 시작 순간). click_at start|end, click_below_db = 목소리 최대 레벨보다 몇 dB 낮게 (말과 겹쳐도 들리게 6). click.wav(마우스 딸깍)는 남겨 둠",
   "sounds": {

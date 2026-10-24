@@ -61,6 +61,7 @@ export type GratitudeStyle = {
   outlineColor?: string;
   shadow?: number; // px, soft drop shadow under the outline
   holdAfter?: number; // s the line stays after its last word
+  softShadow?: { alpha?: number; blur?: number; dx?: number; dy?: number } | null; // 연한 그림자 (2026-10-24): 있으면 이것만 (outline 0 이면 테두리 없음)
   reveal?: "word" | "line"; // "line" (2026-10-23 사용자 결정, 19일차): the whole line appears at once instead of word by word
   dual?: GratitudeDual | null; // two-language subtitles (2026-10-22, 18일차 English): spoken line above, translation below
 };
@@ -87,6 +88,7 @@ export type GratitudeHook = {
   shadow?: { alpha?: number; blur?: number; dx?: number; dy?: number };
   maxChars?: number; // a phrase grows word by word up to this many letters (spaces not counted)
   gap?: number; // s of silence that starts a new phrase
+  color?: string; // solid letter color instead of the gradient (2026-10-24 사용자 결정: #FCEED1)
   charStep?: number; // s per letter at most: a word types out letter by letter from its start (tools/gratitude.py keys = same timing)
 };
 
@@ -101,6 +103,14 @@ export const typeTimes = (words: Word[], charStep = 0.11): number[] => {
     for (let k = 0; k < n; k++) out.push(w.start + k * step);
   });
   return out;
+};
+
+// text-shadow for the spoken subtitles: the soft shadow alone (2026-10-24) or the old outline + shadow
+const subShadow = (s: { outline: number; outlineColor: string; shadow: number; softShadow?: GratitudeStyle["softShadow"] }) => {
+  if (!s.softShadow) return outlineShadow(s.outline, s.outlineColor, s.shadow);
+  const sh = { alpha: 0.35, blur: 8, dx: 2, dy: 3, ...s.softShadow };
+  const soft = `${sh.dx}px ${sh.dy}px ${sh.blur}px rgba(0,0,0,${sh.alpha})`;
+  return s.outline > 0 ? `${outlineShadow(s.outline, s.outlineColor, 0)}, ${soft}` : soft;
 };
 
 export const GRATITUDE_DEFAULTS: Required<GratitudeStyle> = {
@@ -212,8 +222,8 @@ export const GratitudeSubtitles: React.FC<{
         {/* the whole phrase is laid out once (centered) and typed out in place, letter by letter: a clip from the right
             hides the letters not yet typed, so the gradient keeps its place across the line */}
         <span style={{ display: "inline-block", fontFamily: hf, fontSize: size, lineHeight: 1.2, whiteSpace: "pre",
-          padding: `0 ${pad}px`, backgroundImage: `linear-gradient(90deg, ${stops})`, WebkitBackgroundClip: "text",
-          backgroundClip: "text", color: "transparent", transform: `rotate(${-(hook.tilt ?? 0)}deg)`,
+          padding: `0 ${pad}px`, ...(hook.color ? { color: hook.color } : { backgroundImage: `linear-gradient(90deg, ${stops})`, WebkitBackgroundClip: "text",
+          backgroundClip: "text", color: "transparent" }), transform: `rotate(${-(hook.tilt ?? 0)}deg)`,
           clipPath: `inset(-30% ${Math.max(0, fullW - shownW + pad)}px -30% -30%)`,
           filter: `drop-shadow(${sh.dx}px ${sh.dy}px ${sh.blur}px rgba(0,0,0,${sh.alpha}))` }}>
           {full}
@@ -256,7 +266,7 @@ export const GratitudeSubtitles: React.FC<{
   return (
     <div style={{ position: "absolute", left: 0, width: 1080, top: s.centerY - (l.size * lh) / 2, textAlign: "center",
       fontFamily: font, fontWeight: s.weight, fontSize: l.size, lineHeight: lh, color: s.color, whiteSpace: "pre",
-      textShadow: outlineShadow(s.outline, s.outlineColor, s.shadow) }}>
+      textShadow: subShadow(s) }}>
       {l.words.map((w, k) => (
         // words not yet spoken keep their place (the line is laid out once), they are only invisible
         <span key={k} style={{ opacity: s.reveal === "line" || w === l.words[0] || t >= w.start - 0.03 ? 1 : 0 }}>
@@ -466,6 +476,56 @@ def hook_keys(edit: Path, hook: dict) -> list[float]:
     return out
 
 
+def face_center(video: Path, t: float) -> tuple[int, int] | None:
+    """영상 t 초 프레임에서 가장 큰 얼굴의 (위쪽 y, 가운데 y), 1920 높이 기준 (훅 자리 자동 결정, 2026-10-24)."""
+    try:
+        import cv2
+        import numpy as np
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.3f}", "-i", str(video), "-frames:v", "1", "-vf", "scale=540:960",
+                              "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout
+        img = np.frombuffer(raw, np.uint8).reshape(960, 540, 3).copy()
+        model = ROOT / "assets" / "models" / "face_detection_yunet_2023mar.onnx"
+        det = cv2.FaceDetectorYN.create(str(model), "", (540, 960), 0.6, 0.3, 50)
+        _, faces = det.detect(img)
+        if faces is None or not len(faces):
+            return None
+        x, y, w, h = max((f[:4] for f in faces), key=lambda b: b[2] * b[3])
+        return int(y * 2), int((y + h / 2) * 2)
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! 얼굴 검출 실패 ({e}) — 훅은 기본 자리")
+        return None
+
+
+def hook_center_y(edit: Path, hook: dict, until: float) -> float:
+    """훅 글씨 세로 자리 (사용자 결정 2026-10-24): 촬영 원본의 얼굴이 화면 가운데보다 아래면 머리 위(상단), 위면 하단(hook.centerY).
+    훅 구간 가운데 프레임(edit/<id>/final.mp4 — 훅 확대가 들어간 실제 화면)에서 얼굴을 찾는다."""
+    bottom = float(hook.get("centerY", 1430))
+    if hook.get("autoPos", True) is False:
+        return bottom
+    # 위/아래는 촬영 원본(확대 전) 얼굴로 정하고, 머리 위 자리는 실제 화면(final.mp4, 훅 확대 포함)의 얼굴 위쪽으로 잡는다
+    src_fc = None
+    try:
+        cut = json.loads((edit / "cut.json").read_text(encoding="utf-8"))
+        r0 = cut["ranges"][0]
+        srcs = cut.get("sources", {})
+        main = srcs.get("main") or srcs.get(r0.get("source", "main"))
+        f = Path(main["file"]) if Path(main["file"]).is_absolute() else ROOT / main["file"]
+        src_fc = face_center(f, (r0["start"] + r0["end"]) / 2)
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! 원본 얼굴 위치를 못 읽음 ({e}) — 화면 기준")
+    fc = face_center(edit / "final.mp4", max(0.0, until / 2))
+    if not (src_fc or fc):
+        return bottom
+    mid = (src_fc or fc)[1]
+    if mid <= 960 or not fc:
+        return bottom
+    top = fc[0]
+    size = float(hook.get("size", 96))
+    y = max(float(hook.get("topMin", 330)), top - size * 0.75 - float(hook.get("headGap", 20)))
+    print(f"훅 자리: 얼굴 가운데 y {mid} (화면 아래쪽) → 머리 위 y {round(y)}")
+    return round(y)
+
+
 def peak_db(path: Path) -> float | None:
     """소리의 최대 레벨(dBFS) — master_audio 가 효과음 크기를 정하는 기준과 같다."""
     r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-vn", "-af", "volumedetect", "-f", "null", "-"],
@@ -559,6 +619,7 @@ def cmd_props(a) -> None:
         from thumbs import load_style  # 썸네일 공통 스펙(config/thumb.json)까지 따라감
         grad = load_style(STYLE.name).get("thumb_gradient")
         props["gratitudeHook"] = {**c["hook"], "until": round(hook_end, 3), **({"gradient": grad} if grad else {})}
+        props["gratitudeHook"]["centerY"] = hook_center_y(Path(a.edit), c["hook"], hook_end)  # 얼굴 위치로 위/아래 (2026-10-24)
         # 훅 문구와 겹치지 않게 숨겨 두던 창은 이제 필요 없다 (훅 자막이 그 자리)
         props["hideSubtitles"] = [h for h in props.get("hideSubtitles") or [] if not (h[0] <= 0.05 and h[1] <= hook_end + 0.5)]
     cards = pips = 0

@@ -521,6 +521,33 @@ def face_center(video: Path, t: float) -> tuple[int, int] | None:
         return None
 
 
+def head_top(video: Path, t: float) -> int | None:
+    """영상 t 초 프레임에서 머리끝(머리카락 포함) y, 1920 높이 기준 (사용자 결정 2026-10-25: 훅은 머리끝 위에 여유를 두고).
+    얼굴 상자 가운데 폭의 줄별 밝기를 이마에서 위로 훑어, 어두운 머리카락이 끝나고 밝은 배경이 3줄 이어지는 곳.
+    못 찾으면 얼굴 위쪽 − 얼굴 높이 × 0.45 로 어림."""
+    try:
+        import cv2
+        import numpy as np
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.3f}", "-i", str(video), "-frames:v", "1", "-vf", "scale=1080:1920",
+                              "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout
+        img = np.frombuffer(raw, np.uint8).reshape(1920, 1080, 3).copy()
+        model = ROOT / "assets" / "models" / "face_detection_yunet_2023mar.onnx"
+        det = cv2.FaceDetectorYN.create(str(model), "", (1080, 1920), 0.6, 0.3, 50)
+        _, faces = det.detect(img)
+        if faces is None or not len(faces):
+            return None
+        x, y, w, h = [int(v) for v in max((f[:4] for f in faces), key=lambda b: b[2] * b[3])]
+        rows = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[:, max(0, x + w // 4):x + 3 * w // 4].mean(axis=1)
+        fallback = int(y - h * 0.45)
+        for r in range(y - 5, 3, -1):
+            if rows[r] > 120 and rows[r - 1] > 120 and rows[r - 2] > 120:
+                return r if r >= fallback - h * 0.3 else fallback  # 너무 멀리 가면(어두운 배경) 어림값
+        return fallback
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! 머리끝 검출 실패 ({e})")
+        return None
+
+
 def hook_center_y(edit: Path, hook: dict, until: float) -> float:
     """훅 글씨 세로 자리 (사용자 결정 2026-10-24): 촬영 원본의 얼굴이 화면 가운데보다 아래면 머리 위(상단), 위면 하단(hook.centerY).
     훅 구간 가운데 프레임(edit/<id>/final.mp4 — 훅 확대가 들어간 실제 화면)에서 얼굴을 찾는다."""
@@ -547,11 +574,15 @@ def hook_center_y(edit: Path, hook: dict, until: float) -> float:
         return bottom
     top = fc[0]
     size = float(hook.get("size", 96))
-    y = max(float(hook.get("topMin", 330)), top - size * 0.75 - float(hook.get("headGap", 20)))
+    # 머리끝(머리카락 포함) 기준 — 훅 구간에서 머리가 가장 높이 올라간 순간 (2026-10-25)
+    tops = [ht for ht in (head_top(edit / "final.mp4", until * k) for k in (0.2, 0.5, 0.8)) if ht]
+    if tops:
+        top = min(tops)
+    y = max(float(hook.get("topMin", 330)), top - size * 0.6 - float(hook.get("headGap", 20)))
     sz = safe_zone()
     if sz:
         y = max(y, sz["y"][0] + size * 0.75)  # 글자 윗부분이 안전영역 위로 나가지 않게
-    print(f"훅 자리: 얼굴 가운데 y {mid} → 머리 위 y {round(y)}" + (" (안전영역 안)" if sz else ""))
+    print(f"훅 자리: 머리끝 y {top} → 훅 가운데 y {round(y)}" + (" (안전영역 안)" if sz else ""))
     return round(y)
 
 

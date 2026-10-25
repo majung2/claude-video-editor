@@ -120,6 +120,14 @@ export const GRATITUDE_DEFAULTS: Required<GratitudeStyle> = {
 
 type Line = { words: Word[]; start: number; end: number; size: number };
 const text = (ws: Word[]) => ws.map((w, k) => (k && !w.glue ? " " : "") + w.text).join("");
+// 문장이 끝나면 다음 자막으로 (사용자 결정 2026-10-25, 21일차): 존댓말 문장 끝(~니다/~요/~죠) 또는 . ! ? 뒤에서 덩어리를 끊는다.
+// buildChunks 는 seg 가 바뀌면 끊으므로, 문장 끝 다음 단어부터 seg 번호를 하나씩 올린다.
+const SENT_END_KO = /(니다|요|죠)[.!?\u2026]*$|[.!?\u2026]$/;
+const sentenceSegs = (ws: Word[], on: boolean): Word[] => {
+  if (!on) return ws;
+  let n = 0;
+  return ws.map((w) => { const o = { ...w, seg: ((w as any).seg ?? 0) * 1000 + n } as Word; if (SENT_END_KO.test(w.text)) n += 1; return o; });
+};
 
 // an outline drawn with text-shadow in 16 directions (CSS text-stroke would eat into the glyphs), plus a soft shadow
 const outlineShadow = (px: number, color: string, shadow: number) => {
@@ -178,7 +186,7 @@ export const GratitudeSubtitles: React.FC<{
     const dual = s.dual;
     const parts = dual && dual.lines.length
       ? dual.lines.map((d) => words.filter((w) => w.start >= d.start - 0.05 && w.start < d.end)).filter((ws) => ws.length)
-      : buildChunks(words, 40, 200).flatMap((c) => fit(c.words));
+      : buildChunks(sentenceSegs(words, (s as any).sentenceBreak !== false), 40, 200).flatMap((c) => fit(c.words));
     const out: Line[] = parts.map((ws) => ({
       words: ws, start: ws[0].start, end: ws[ws.length - 1].end + s.holdAfter,
       // a single word wider than the line shrinks instead of running past the edge
@@ -476,6 +484,23 @@ def hook_keys(edit: Path, hook: dict) -> list[float]:
     return out
 
 
+def safe_zone() -> dict | None:
+    """릴스 화면 안전영역 (모든 스타일 공통, config/safe_zone.json — 사용자 결정 2026-10-25). {"x": [좌, 우], "y": [위, 아래]}"""
+    p = ROOT / "config" / "safe_zone.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+
+def in_safe(box: list) -> list:
+    """[x, y, w, h] 상자를 안전영역 안으로 줄인다 (비율 유지하지 않음 — 키트가 상자 안에 사진을 맞춰 그린다)."""
+    sz = safe_zone()
+    if not sz:
+        return box
+    x, y, w, h = box
+    x0, x1 = max(x, sz["x"][0]), min(x + w, sz["x"][1])
+    y0, y1 = max(y, sz["y"][0]), min(y + h, sz["y"][1])
+    return [round(x0), round(y0), round(x1 - x0), round(y1 - y0)]
+
+
 def face_center(video: Path, t: float) -> tuple[int, int] | None:
     """영상 t 초 프레임에서 가장 큰 얼굴의 (위쪽 y, 가운데 y), 1920 높이 기준 (훅 자리 자동 결정, 2026-10-24)."""
     try:
@@ -517,12 +542,16 @@ def hook_center_y(edit: Path, hook: dict, until: float) -> float:
     if not (src_fc or fc):
         return bottom
     mid = (src_fc or fc)[1]
-    if mid <= 960 or not fc:
+    always = bool(hook.get("alwaysAbove"))  # 사용자 결정 2026-10-25: 얼굴 위치와 상관없이 머리 위, 안전영역 안
+    if not fc or (mid <= 960 and not always):
         return bottom
     top = fc[0]
     size = float(hook.get("size", 96))
     y = max(float(hook.get("topMin", 330)), top - size * 0.75 - float(hook.get("headGap", 20)))
-    print(f"훅 자리: 얼굴 가운데 y {mid} (화면 아래쪽) → 머리 위 y {round(y)}")
+    sz = safe_zone()
+    if sz:
+        y = max(y, sz["y"][0] + size * 0.75)  # 글자 윗부분이 안전영역 위로 나가지 않게
+    print(f"훅 자리: 얼굴 가운데 y {mid} → 머리 위 y {round(y)}" + (" (안전영역 안)" if sz else ""))
     return round(y)
 
 
@@ -643,10 +672,10 @@ def cmd_props(a) -> None:
             # 가로 사진: 작게 위쪽 (레퍼런스 PiP, 폭 55 %, 세로 중심 40 %)
             w = round(1080 * c["pip"]["w"])
             h = min(round(w * size[1] / size[0]), round(1920 * c["pip"]["max_h"]))
-            ins["box"] = [round((1080 - w) / 2), round(1920 * c["pip"]["center_y"] - h / 2), w, h]
+            ins["box"] = in_safe([round((1080 - w) / 2), round(1920 * c["pip"]["center_y"] - h / 2), w, h])
             pips += 1
         else:
-            ins["box"] = list(c["card"])
+            ins["box"] = in_safe(list(c["card"]))  # 안전영역 안 (2026-10-25)
             cards += 1
     p.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
     s = c["subtitles"]
